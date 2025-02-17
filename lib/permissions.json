@@ -1,0 +1,344 @@
+{
+    "generalPermissions": [
+      {
+        "action": "create",
+        "subject": "Post"
+      },
+      {
+        "action": "read",
+        "subject": "Post"
+      },
+      {
+        "action": "update",
+        "subject": "Post",
+        "conditions": { "userId": "{{_id}}" }
+      },
+      {
+        "action": "delete",
+        "subject": "Post",
+        "conditions": { "userId": "{{_id}}" }
+      },
+      {
+        "action": "create",
+        "subject": "Comment"
+      },
+      {
+        "action": "read",
+        "subject": "Comment"
+      },
+      {
+        "action": "update",
+        "subject": "Comment",
+        "conditions": { "userId": "{{_id}}" }
+      },
+      {
+        "action": "delete",
+        "subject": "Comment",
+        "conditions": { "userId": "{{_id}}" }
+      },
+      {
+        "action": "update",
+        "subject": "Profile",
+        "conditions": { "userId": "{{_id}}" }
+      }
+    ],
+    "employeePermissions": [
+      {
+        "action": "create",
+        "subject": "Task"
+      },
+      {
+        "action": "update",
+        "subject": "Task",
+        "conditions": { "owner": {"$in": ["{{_id}}"]} }
+      },
+      {
+        "action": "read",
+        "subject": "Task"
+      },
+      {
+        "action": "delete",
+        "subject": "Task",
+        "conditions": { "owner": {"$in": ["{{_id}}"]} }
+      },
+      {
+        "action": "read",
+        "subject": "Goal"
+      },
+      {
+        "action": "read",
+        "subject": "Objective"
+      },
+      {
+        "action": "create",
+        "subject": "Challenge"
+      },
+      {
+        "action": "read",
+        "subject": "Challenge"
+      },
+      {
+        "action": "update",
+        "subject": "Challenge",
+        "conditions": { "reportedBy": "{{_id}}" }
+      },
+      {
+        "action": "delete",
+        "subject": "Challenge",
+        "conditions": { "reportedBy": "{{_id}}" }
+      },
+      {
+        "action": "create",
+        "subject": "Risk"
+      },
+      {
+        "action": "read",
+        "subject": "Risk"
+      },
+      {
+        "action": "update",
+        "subject": "Risk",
+        "conditions": { "reportedBy": "{{_id}}" }
+      },
+      {
+        "action": "delete",
+        "subject": "Risk",
+        "conditions": { "reportedBy": "{{_id}}" }
+      },
+      {
+        "action": "read",
+        "subject": "Period"
+      },
+      {
+        "action": "read",
+        "subject": "Weight"
+      },
+      {
+        "action": "read",
+        "subject": "Team"
+      },
+      {
+        "action": "read",
+        "subject": "TeamMember"
+      },
+      {
+        "action": "create",
+        "subject": "Attendance"
+      },
+      {
+        "action": "create",
+        "subject": "Folder"
+      },
+      {
+        "action": "delete",
+        "subject": "Folder",
+        "conditions": { "createdBy": "{{_id}}" }
+      },
+      {
+        "action": "update",
+        "subject": "Folder",
+        "conditions": { "createdBy": "{{_id}}" }
+      },
+      {
+        "action": "create",
+        "subject": "File"
+      },
+      {
+        "action": "delete",
+        "subject": "File",
+        "conditions": { "createdBy": "{{_id}}" }
+      },
+      {
+        "action": "update",
+        "subject": "File",
+        "conditions": { "createdBy": "{{_id}}" }
+      },
+      {
+        "action": "read",
+        "subject": "File"
+      }
+    ],
+    "teamLeadPermissions": [
+      {
+        "action": "manage",
+        "subject": "Challenge"
+      },
+      {
+        "action": "manage",
+        "subject": "Risk"
+      },
+      {
+        "action": "manage",
+        "subject": "Task"
+      },
+      {
+        "action": "manage",
+        "subject": "Period"
+      },
+      {
+        "action": "manage",
+        "subject": "Weight"
+      },
+      {
+        "action": "manage",
+        "subject": "Category"
+      },
+      {
+        "action": "manage",
+        "subject": "Teammate"
+      }
+    ],
+    "managerPermissions": [
+      {
+        "action": "create",
+        "subject": "Goal"
+      },
+      {
+        "action": "delete",
+        "subject": "Goal"
+      },
+      {
+        "action": "update",
+        "subject": "Goal"
+      },
+      {
+        "action": "create",
+        "subject": "Objective"
+      },
+      {
+        "action": "delete",
+        "subject": "Objective"
+      },
+      {
+        "action": "update",
+        "subject": "Objective"
+      },
+      {
+        "action": "create",
+        "subject": "TeamMember"
+      },
+      {
+        "action": "delete",
+        "subject": "TeamMember"
+      },
+      {
+        "action": "update",
+        "subject": "TeamMember"
+      },
+      {
+        "action": "create",
+        "subject": "TeamLead"
+      },
+      {
+        "action": "delete",
+        "subject": "TeamLead"
+      },
+      {
+        "action": "update",
+        "subject": "TeamLead"
+      },
+      {
+        "action": "read",
+        "subject": "Attendance"
+      },
+      {
+        "action": "update",
+        "subject": "Attendance"
+      },
+      {
+        "action": "create",
+        "subject": "Team"
+      },
+      {
+        "action": "delete",
+        "subject": "Team"
+      },
+      {
+        "action": "update",
+        "subject": "Team"
+      }
+    ],
+    "adminPermissions": [
+      {
+        "action": "manage",
+        "subject": "Post"
+      },
+      {
+        "action": "manage",
+        "subject": "Comment"
+      },
+
+      {
+        "action": "manage",
+        "subject": "Task"
+      },
+      {
+        "action": "manage",
+        "subject": "Goal"
+      },
+      {
+        "action": "manage",
+        "subject": "Objective"
+      },
+      {
+        "action": "manage",
+        "subject": "Challenge"
+      },
+      {
+        "action": "manage",
+        "subject": "Risk"
+      },
+      {
+        "action": "manage",
+        "subject": "Category"
+      },
+      {
+        "action": "manage",
+        "subject": "Period"
+      },
+      {
+        "action": "manage",
+        "subject": "Weight"
+      },
+      
+      {
+        "action": "manage",
+        "subject": "Folder"
+      },
+      {
+        "action": "manage",
+        "subject": "File"
+      },
+      {
+        "action": "manage",
+        "subject": "Team"
+      },
+      {
+        "action": "manage",
+        "subject": "Teammate"
+      },
+      {
+        "action": "manage",
+        "subject": "Profile"
+      },
+      {
+        "action": "manage",
+        "subject": "Attendance"
+      }
+    ],
+    "superAdminPermissions": [
+      {
+        "action": "manage",
+        "subject": "all"
+      },
+      {
+        "action": "manage",
+        "subject": "User"
+      },
+      {
+        "action": "manage",
+        "subject": "role"
+      }
+    ]
+  }
+  
