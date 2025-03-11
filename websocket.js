@@ -17,7 +17,7 @@ const initSocketIO = (httpServer) => {
   const io = new SocketIO.Server(httpServer, {
     path: "/socket.io",
     cors: {
-      origin: process.env.frontend_domain,
+      origin: process.env.frontend_domain.split(","),
       methods: ["GET", "POST", "PATCH", "DELETE"],
       credentials: true,
     },
@@ -25,6 +25,7 @@ const initSocketIO = (httpServer) => {
 
   io.use((socket, next) => {
     const token = socket.handshake.query.token;
+    const companyDomain = socket.handshake.query.companyDomain.split("//")[1];
     if (!token) {
       return next(new Error("Authentication error: Token not provided"));
     }
@@ -32,6 +33,7 @@ const initSocketIO = (httpServer) => {
     try {
       const decodedToken = jwt.verify(token, process.env.access_token);
       socket.userId = decodedToken?.userId; // Attach user info to the socket
+      socket.companyDomain = companyDomain;
       next();
     } catch (err) {
       next(new Error("Authentication error: Invalid token"));
@@ -42,7 +44,11 @@ const initSocketIO = (httpServer) => {
 
   const addNewUser = (data) => {
     if (!onlineUsers[data.userId]) {
-      onlineUsers[data.userId] = [data.socket.id, data.status];
+      onlineUsers[data.userId] = [
+        data.socket.id,
+        data.status,
+        data.companyDomain,
+      ];
     }
   };
 
@@ -55,7 +61,6 @@ const initSocketIO = (httpServer) => {
   };
 
   const storedNotificationForUser = async (data) => {
-
     try {
       const {
         senderId,
@@ -127,8 +132,6 @@ const initSocketIO = (httpServer) => {
       .filter((user) => data.receivers.some((item) => user[0] === item._id))
       .map((item) => item[1][0]);
 
-
-
     const offlineUsers = data.receivers.filter(
       (user) =>
         !Object.entries(onlineUsers).some((item) => item[0] === user._id)
@@ -147,14 +150,14 @@ const initSocketIO = (httpServer) => {
 
   io.on("connection", async (socket) => {
     const userId = socket.userId;
+    const companyDomain = socket.companyDomain;
     const lastLogin = new Date();
 
-    addNewUser({ userId, socket, status: "online" });
+    addNewUser({ companyDomain, userId, socket, status: "online" });
 
-    // console.log({In: onlineUsers})
+    console.log({In: onlineUsers})
 
-
-     io.emit("onlineUsers", onlineUsers);
+    io.emit("onlineUsers", onlineUsers);
 
     getStoredNotificationsForUser(userId, socket);
     await User.findOneAndUpdate(
@@ -163,7 +166,13 @@ const initSocketIO = (httpServer) => {
       { new: true }
     );
     socket.on("refreshPost", (post) => {
-      io.emit("refreshPost", post);
+      const usersSocketId = Object.entries(onlineUsers)
+        .filter((user) => user[1][2] === post.payload.companyDomain)
+        .map((item) => item[1][0]);
+
+      console.log({ usersSocketId });
+
+      io.to(usersSocketId).emit("refreshPost", post);
     });
 
     socket.on("emitGetUsers", () => {
@@ -204,7 +213,7 @@ const initSocketIO = (httpServer) => {
     });
 
     socket.on("updateStatus", async (data) => {
-      onlineUsers[userId][1] = data
+      onlineUsers[userId][1] = data;
       io.emit("onlineUsers", onlineUsers);
     });
 
@@ -212,7 +221,6 @@ const initSocketIO = (httpServer) => {
       removeUser(userId);
       // console.log({Out: onlineUsers})
       io.emit("onlineUsers", onlineUsers);
-
     });
   });
 

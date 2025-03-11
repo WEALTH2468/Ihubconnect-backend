@@ -6,10 +6,11 @@ const cors = require("cors");
 const cron = require("node-cron");
 
 const app = express();
-const { differenceInDays } = require('date-fns');
+const { differenceInDays } = require("date-fns");
 const Task = require("./models/iperformance/task");
 const Role = require("./models/rbac/role");
 const Chat = require("./models/chat");
+const Weight = require("./models/weight");
 
 const userRoutes = require("./routes/user");
 const customerRoutes = require("./routes/customer");
@@ -45,6 +46,8 @@ const attachmentTypeRoutes = require("./routes/attachmentType");
 const attendantRoutes = require("./routes/attendant");
 const responsibilityRoutes = require("./routes/responsibility");
 const checkInRoutes = require("./routes/checkIn");
+const jobPositionRoutes = require("./routes/jobPosition");
+const weightRoutes = require("./routes/weight");
 
 //iPerformance
 const iperformanceRoutes = require("./routes/iperformance");
@@ -69,6 +72,8 @@ function connectToDatabase() {
   // updateComment()
   // updatePost()
   // updateDocument()
+
+  console.log(process.env.frontend_domain.split(","));
   return new Promise((resolve, reject) => {
     mongoose
       .connect(process.env.localConnect, {
@@ -77,9 +82,10 @@ function connectToDatabase() {
         family: 4,
       })
       .then(async () => {
-        await createDefaultRolesIfAbsent();
         // await generateChat()
         console.log("Connected to local MongoDB");
+        await createDefaultRolesIfAbsent();
+        await createDefaultWeights();
         resolve();
       })
       .catch((error) => {
@@ -94,6 +100,7 @@ function connectToDatabase() {
           .then(async () => {
             console.log("Connected to remote MongoDB");
             await createDefaultRolesIfAbsent();
+            //await createDefaultWeights();
             resolve();
           })
           .catch((fallbackError) => {
@@ -111,7 +118,7 @@ connectToDatabase();
 
 app.use(
   cors({
-    origin: process.env.frontend_domain,
+    origin: process.env.frontend_domain.split(","), // allow to server to accept request from different origin
     methods: ["GET", "POST", "PATCH", "DELETE"],
     credentials: true,
   })
@@ -153,8 +160,8 @@ app.use("/lesson", lessonRoutes);
 app.use("/quiz", quizRoutes);
 app.use("/quotes", quoteRoutes);
 app.use("/items", itemRoutes);
-app.use("/permissions", permissionRoutes)
-
+app.use("/permissions", permissionRoutes);
+app.use("/move-data", require("./routes/moveRoute"));
 // category
 app.use("/category", categoryRoutes);
 
@@ -172,9 +179,9 @@ app.use("/teammate", teammateRoutes);
 app.use("/settings/attachmentType", attachmentTypeRoutes);
 app.use("/time/attendant", attendantRoutes);
 app.use("/settings/responsibility", responsibilityRoutes);
-app.use("/checkIn", checkInRoutes );
-
-
+app.use("/checkIn", checkInRoutes);
+app.use("/settings/job-positions", jobPositionRoutes);
+app.use("/settings/weights", weightRoutes);
 
 async function updateUsers() {
   const users = await User.find({});
@@ -308,7 +315,7 @@ async function updatePost() {
 async function updateDocument() {
   const documents = await Document.find({}).lean();
 
-  console.log({documents})
+  console.log({ documents });
 
   const updateTasks = documents.map(async (document) => {
     let updated = false;
@@ -317,11 +324,11 @@ async function updateDocument() {
       document.files = document.files.map((fileObj) => {
         if (
           fileObj.file &&
-          fileObj.file.includes('http://www.mudiame-api.ihubconnect.com')
+          fileObj.file.includes("http://www.mudiame-api.ihubconnect.com")
         ) {
           fileObj.file = fileObj.file.replace(
-            'http://www.mudiame-api.ihubconnect.com',
-            ''
+            "http://www.mudiame-api.ihubconnect.com",
+            ""
           );
           updated = true;
         }
@@ -338,11 +345,30 @@ async function updateDocument() {
   await Promise.all(updateTasks);
 }
 
-async function updateTasks() {
-  const tasks = await Task.find({});
-  for (let task of tasks) {
-    task.title = task.task;
-    task.save();
+async function createDefaultWeights() {
+  const requiredWeights = [
+    { name: "Task", icon: "#007BFF" },
+    { name: "Report", icon: "#6C757D" },
+  ];
+
+  const existingWeights = await Weight.find({
+    name: { $in: requiredWeights.map((w) => w.name) },
+  });
+  const weightMap = new Map(
+    existingWeights.map((weight) => [weight.name, weight._id])
+  );
+
+  for (const { name, icon } of requiredWeights) {
+    if (!weightMap.has(name)) {
+      const newWeight = await Weight.create({
+        name,
+        value: 1,
+        icon,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      });
+      weightMap.set(name, newWeight._id);
+    }
   }
 }
 
