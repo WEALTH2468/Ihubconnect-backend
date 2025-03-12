@@ -7,50 +7,23 @@ const cron = require("node-cron");
 
 const app = express();
 const { differenceInDays } = require("date-fns");
-const Task = require("./models/iperformance/task");
 const Role = require("./models/rbac/role");
 const Chat = require("./models/chat");
-const Weight = require("./models/weight");
 
 const userRoutes = require("./routes/user");
 const customerRoutes = require("./routes/customer");
 const postRoutes = require("./routes/post");
 const commentRoutes = require("./routes/comment");
-const documentRoutes = require("./routes/document");
 const notificationRoutes = require("./routes/notification");
-
 const roleRoutes = require("./routes/rbac/role");
 const permissionRoutes = require("./routes/rbac/permission");
 
 const settingsRoutes = require("./routes/settings");
-const departmentRoutes = require("./routes/department");
-const unitRoutes = require("./routes/unit");
-const feedbackRoutes = require("./routes/feedback");
-const roomRoutes = require("./routes/room");
 const messageRoutes = require("./routes/message");
-const reactionRoutes = require("./routes/reaction");
-const readReceiptRoutes = require("./routes/readReceipt");
-const courseRoutes = require("./routes/course");
-const lessonRoutes = require("./routes/lesson");
-const quizRoutes = require("./routes/quiz");
 const quoteRoutes = require("./routes/quote");
 const itemRoutes = require("./routes/item");
-const dashboardRoutes = require("./routes/dashboard/iperformance");
-
 // category routes
 const categoryRoutes = require("./routes/category");
-
-const teamRoutes = require("./routes/team");
-const teammateRoutes = require("./routes/teammate");
-const attachmentTypeRoutes = require("./routes/attachmentType");
-const attendantRoutes = require("./routes/attendant");
-const responsibilityRoutes = require("./routes/responsibility");
-const checkInRoutes = require("./routes/checkIn");
-const jobPositionRoutes = require("./routes/jobPosition");
-const weightRoutes = require("./routes/weight");
-
-//iPerformance
-const iperformanceRoutes = require("./routes/iperformance");
 
 const User = require("./models/user");
 const Comment = require("./models/comment");
