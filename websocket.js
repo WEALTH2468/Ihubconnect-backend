@@ -123,17 +123,19 @@ const initSocketIO = (httpServer) => {
   };
 
   const emitNotification = (data) => {
+    // Filter out the sender from the list of receivers
+    const filteredReceivers = data.receivers.filter((user) => user._id !== data.senderId);
+
+  
     const onlineIds = Object.entries(onlineUsers)
-      .filter((user) => data.receivers.some((item) => user[0] === item._id))
+      .filter((user) => filteredReceivers.some((item) => user[0] === item._id))
       .map((item) => item[1][0]);
-
-
-
-    const offlineUsers = data.receivers.filter(
+  
+    const offlineUsers = filteredReceivers.filter(
       (user) =>
         !Object.entries(onlineUsers).some((item) => item[0] === user._id)
     );
-
+  
     if (onlineIds.length > 0) {
       io.to(onlineIds).emit("emitNotification", data);
     }
@@ -144,6 +146,8 @@ const initSocketIO = (httpServer) => {
       });
     }
   };
+  
+  
 
   io.on("connection", async (socket) => {
     const userId = socket.userId;
