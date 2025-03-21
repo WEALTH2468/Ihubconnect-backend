@@ -9,6 +9,7 @@ const app = express();
 const { differenceInDays } = require('date-fns');
 const Role = require("./models/rbac/role");
 const Chat = require("./models/chat");
+const Weight = require("./models/weight");
 
 const userRoutes = require("./routes/user");
 const postRoutes = require("./routes/post");
@@ -39,6 +40,8 @@ function connectToDatabase() {
   // updateComment()
   // updatePost()
   // updateDocument()
+
+  console.log(process.env.frontend_domain.split(","));
   return new Promise((resolve, reject) => {
     mongoose
       .connect(process.env.localConnect, {
@@ -47,9 +50,10 @@ function connectToDatabase() {
         family: 4,
       })
       .then(async () => {
-        await createDefaultRolesIfAbsent();
         // await generateChat()
         console.log("Connected to local MongoDB");
+        await createDefaultRolesIfAbsent();
+        await createDefaultWeights();
         resolve();
       })
       .catch((error) => {
@@ -64,6 +68,7 @@ function connectToDatabase() {
           .then(async () => {
             console.log("Connected to remote MongoDB");
             await createDefaultRolesIfAbsent();
+            //await createDefaultWeights();
             resolve();
           })
           .catch((fallbackError) => {
@@ -81,7 +86,7 @@ connectToDatabase();
 
 app.use(
   cors({
-    origin: process.env.frontend_domain,
+    origin: process.env.frontend_domain.split(","), // allow to server to accept request from different origin
     methods: ["GET", "POST", "PATCH", "DELETE"],
     credentials: true,
   })
@@ -110,7 +115,5 @@ app.use("/notifications", notificationRoutes);
 app.use("/roles", roleRoutes);
 app.use("/settings", settingsRoutes)
 app.use("/chat", messageRoutes);
-app.use("/permissions", permissionRoutes)
-
 
 module.exports = app;
