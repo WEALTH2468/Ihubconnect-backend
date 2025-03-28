@@ -1,70 +1,69 @@
-const Settings = require('../models/settings');
-const fs = require('fs');
-const path = require('path');
+const Settings = require("../models/settings");
+const fs = require("fs");
 
 exports.updateLogo = async (req, res, next) => {
   try {
-    const logoFileName = req.files.logo[0].filename;
-    const logoUrl = '/logo/' + logoFileName;
-    const logoFolderPath = path.join(__dirname, '../logo');
+    const companyDomain = req.headers.origin.split("//")[1];
+    const company = JSON.parse(req.body.company);
+    let logoPath = null;
 
-    // Check if there is an existing logo in the database
-    let settings = await Settings.findOne();
-    if (!settings) {
-      // If no settings exist, create a new one with the logo URL
-      settings = new Settings({ logo: logoUrl });
-    } else {
-      // Save the current logo to the logo folder
-      const currentLogoPath = path.join(logoFolderPath, logoFileName);
-      const destinationPath = path.join(logoFolderPath, logoFileName);
-
-      // Copy the current logo to the logo folder
-      fs.copyFileSync(currentLogoPath, destinationPath);
-
-      // Delete all files in the logo folder except the current logo
-      fs.readdir(logoFolderPath, (err, files) => {
-        if (err) {
-          console.error('Error reading logo folder:', err);
-        } else {
-          files.forEach((file) => {
-            if (file !== logoFileName) {
-              const filePath = path.join(logoFolderPath, file);
-              fs.unlink(filePath, (err) => {
-                if (err) {
-                  console.error('Error deleting file:', err);
-                } else {
-                  console.log('File deleted successfully:', filePath);
-                }
-              });
-            }
-          });
-        }
-      });
-
-      // Update the logo URL
-      settings.logo = logoUrl;
+    if (company.logo && company.logo.includes("/logo/")) {
+      logoPath = `/logo/${company.logo?.split("/logo/")[1]}`;
     }
 
-    // Save the updated settings
-    const updatedSettings = await settings.save();
+    if (req.files && Object.keys(req.files).length > 0) {
+      const logoName = company.logo?.split("/logo/")[1];
 
-    res.status(200).json(updatedSettings);
+      if (logoName) {
+        fs.unlink("logo/" + logoName, () => {
+          console.log("File deleted successfully:", logoName);
+        });
+      }
+
+      logoPath = `/logo/${req.files.logo[0].filename}`;
+    }
+
+    let settings = await Settings.find({ companyDomain });
+
+    if (settings.length === 0) {
+      company.companyDomain = companyDomain;
+      company.logo = logoPath;
+      settings = new Settings(company);
+      savedSettings = await settings.save();
+      res.status(200).json(savedSettings);
+    } else {
+      settings = settings[0];
+
+      settings.logo = logoPath;
+      settings.companyName = company.companyName;
+      settings.address = company.address;
+      settings.phone = company.phone;
+      settings.email = company.email;
+      settings.ownerName = company.ownerName;
+      settings.ownerPhone = company.ownerPhone;
+      settings.ownerEmail = company.ownerEmail;
+
+      settings = await settings.save();
+
+      res.status(200).json(settings);
+    }
   } catch (error) {
-    console.error(error);
-    return res.status(500).json({ message: error.message });
+    console.error("Upload error:", error);
+    res.status(500).json({ error: "File upload failed" });
   }
 };
 
 exports.getLogo = async (req, res, next) => {
   try {
-    const settings = await Settings.findOne();
-    if (!settings) {
-      return res.status(404).json({ message: 'Settings not found' });
+    const companyDomain = req.headers.origin.split("//")[1];
+
+    const settings = await Settings.find({companyDomain});
+    
+    if (settings.length === 0) {
+      return res.status(404).json({ message: "Settings not found" });
     }
 
-    const logo = settings.logo;
-    console.log(logo);
-    return res.status(200).json(logo);
+    return res.status(200).json(settings[0]);
   } catch (err) {
     return res.status(500).json({ message: err.message });
   }

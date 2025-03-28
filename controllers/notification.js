@@ -13,10 +13,12 @@ exports.getNotifications = async (req, res, next) => {
 };
 
 exports.addNotification = async (req, res, next) => {
-    try{       
+    try{    
+        const companyDomain = req.headers.origin.split('//')[1];   
         const {senderId, receiverId, description, image, read, link, useRouter} = req.body;
 
         const newNotification = new Notification({
+            companyDomain,
             senderId, receiverId, description, image, read, link, useRouter,
             time: Date.now()
         })

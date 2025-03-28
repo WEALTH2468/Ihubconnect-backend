@@ -1,18 +1,24 @@
-const bcrypt = require('bcrypt');
-const Role = require('../models/rbac/role');
-const User = require('../models/user');
+const bcrypt = require("bcrypt");
+const Role = require("../models/rbac/role");
+const User = require("../models/user");
+const Weight = require("../models/weight");
 const TempUser = require("../models/tempUser");
-const jwt = require('jsonwebtoken');
-const fs = require('fs');
-const { sendMail } = require('../utils/sendMail');
-const { HandleError } = require('../utils/error');
-const { CatchErrorFunc } = require('../utils/CatchErrorFunc');
-const crypto = require('crypto');
-const { error } = require('console');
-const { Error } = require('mongoose');
-const { getGravatarBlob, saveImageBlob } = require("../utils/getDefaultsAvater");
-const Mustache = require('mustache');
-const { removeListener } = require('../models/post');
+const jwt = require("jsonwebtoken");
+const fs = require("fs");
+const { sendMail } = require("../utils/sendMail");
+const { HandleError } = require("../utils/error");
+const { CatchErrorFunc } = require("../utils/CatchErrorFunc");
+const crypto = require("crypto");
+const { error } = require("console");
+const { Error } = require("mongoose");
+const {
+  getGravatarBlob,
+  saveImageBlob,
+} = require("../utils/getDefaultsAvater");
+const Mustache = require("mustache");
+const { removeListener } = require("../models/post");
+const { getLogo } = require("./settings");
+const Settings = require("../models/settings");
 
 const signToken = (userId) => {
   return jwt.sign({ userId: userId }, process.env.access_token, {
@@ -20,28 +26,36 @@ const signToken = (userId) => {
   });
 };
 
-const getUserWithUnitsMembers = async (userId) => {
+const getUserWithUnitsMembers = async (companyDomain, userId) => {
   try {
     // Find the user based on userId
-    const userNewData = await User.findOne({ _id: userId }).lean();
-    const roleData = await Role.findOne({ _id: userNewData.roleId }).lean();
+    const userNewData = await User.findOne({ companyDomain, _id: userId })
+      .populate("jobPosition")
+      .lean();
+    const roleData = await Role.findOne({ _id: userNewData?.roleId }).lean();
     if (roleData) {
       userNewData.role = roleData.name.toLowerCase();
     }
     if (!userNewData) {
-      throw new Error('User not found');
+      throw new Error("User not found");
     }
 
     // Find unitsMembers based on the units field of the found user
     const unitsMembers = await User.find(
       {
+        companyDomain,
         units: { $in: userNewData.units },
         _id: { $ne: userNewData._id },
       },
       { displayName: 1, _id: 1, units: 1, avatar: 1 }
     );
 
-    userNewData.permissions = Mustache.render(roleData.permissions, userNewData);
+    if (roleData) {
+      userNewData.permissions = Mustache.render(
+        roleData.permissions,
+        userNewData
+      );
+    }
 
     delete userNewData.password;
 
@@ -61,24 +75,48 @@ const hashPassword = async (password) => {
 };
 
 exports.getUsers = async (req, res, next) => {
+  const companyDomain = req.headers.origin.split("//")[1];
+
   try {
     const userId = req.params.id;
-    if (userId == 'undefined') {
-      const users = await User.find({}, { password: 0 });
+    if (userId == "undefined") {
+      const users = await User.find(
+        { companyDomain, isActive: true },
+        { password: 0 }
+      ).populate("jobPosition");
       return res.status(200).json(users);
     }
 
-    const user = await getUserWithUnitsMembers(userId);
+    const user = await getUserWithUnitsMembers(companyDomain, userId);
 
     return res.status(200).json(user);
   } catch (err) {
     return res.status(500).json({ message: err.message });
   }
 };
+
+exports.getAllUsers = async (req, res, next) => {
+  const companyDomain = req.headers.origin.split("//")[1];
+
+  try {
+    const users = await User.find({ companyDomain }, { password: 0 }).populate(
+      "jobPosition"
+    );
+    return res.status(200).json(users);
+  } catch (err) {
+    return res.status(500).json({ message: err.message });
+  }
+};
+
 exports.getUsersForChatSideBar = async (req, res, next) => {
+  const companyDomain = req.headers.origin.split("//")[1];
+
   try {
     const { userId } = req.auth;
-    const users = await User.find({ _id: { $ne: userId } }, { password: 0 });
+    const users = await User.find(
+      { companyDomain, _id: { $ne: userId }, isActive: true },
+      { password: 0 }
+    );
 
     return res.status(200).json(users);
   } catch (err) {
@@ -87,9 +125,11 @@ exports.getUsersForChatSideBar = async (req, res, next) => {
 };
 exports.refresh = async (req, res, next) => {
   try {
+    const companyDomain = req.headers.origin.split("//")[1];
+
     const { userId } = req.auth;
 
-    const user = await getUserWithUnitsMembers(userId);
+    const user = await getUserWithUnitsMembers(companyDomain, userId);
 
     const access_token = signToken(user._id);
 
@@ -102,9 +142,15 @@ exports.refresh = async (req, res, next) => {
 
 exports.signup = async (req, res, next) => {
   try {
+    const companyDomain = req.headers.origin.split("//")[1];
+
+    const settings = await Settings.find({ companyDomain });
+    console.log({ settings: settings.length < 1 });
+    const companyName = settings.length > 0 ? settings[0].companyDomain : "";
+
     const { email, displayName, password, firstName, lastName } = req.body;
 
-    const userNewData = await User.findOne({ email }).lean();
+    const userNewData = await User.findOne({ companyDomain, email }).lean();
     if (!!userNewData) {
       return res.status(409).json([
         {
@@ -115,18 +161,56 @@ exports.signup = async (req, res, next) => {
       ]);
     }
 
-    const tempUser = await TempUser.findOne({ email });
+    const tempUser = await TempUser.findOne({ companyDomain, email });
     if (tempUser) {
       // If the email exists in TempUser, update the verification code and resend the email
       tempUser.generateVerificationCode();
       await tempUser.save();
 
-        const access_token = signToken(tempUser._id);
+      const access_token = signToken(tempUser._id);
+      const html = `
+              <body style="margin: 0; padding: 0; background: #f8f9fb; text-align: center;">
+    <table role="presentation" width="100%" height="100%" cellspacing="0" cellpadding="0" border="0">
+        <tr>
+            <td align="center" valign="middle">
+                <table role="presentation" width="600" cellspacing="0" cellpadding="0" border="0" style="background: white; padding: 25px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1); text-align: center; border: 1px solid #ddd;">
+                    <tr>
+                        <td style="font-size: 18px; font-weight: bold; color: #333; padding-bottom: 15px;">
+                            You have requested a One-Time Password for ${companyName}.
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="background: #f4f4f4; padding: 15px; border-radius: 8px; display: inline-block; font-size: 28px; font-weight: bold; color: #000; letter-spacing: 2px; width: auto; min-width: 120px; text-align: center;">
+                            ${tempUser.verificationCode}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="font-size: 14px; color: #555; padding-top: 10px;">
+                            This code is only valid for 10 minutes. <strong>DO NOT SHARE</strong>. ${companyName} agents will never ask for this code.
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="font-size: 14px; color: #555; padding-top: 10px;">
+                            If you didn't request this, please ensure your account security is up to date.
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="font-size: 12px; color: #777; border-top: 1px solid #ddd; padding-top: 15px;">
+                            &copy; 2025 ${companyName}. All rights reserved.
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+            `;
 
       await sendMail({
         email: tempUser.email,
         subject: "Email Verification",
-        message: `Your new verification code is: ${tempUser.verificationCode}`,
+        // message: `Your new verification code is: ${tempUser.verificationCode}`,
+        html,
       });
 
       return res.status(200).json({
@@ -141,6 +225,7 @@ exports.signup = async (req, res, next) => {
     const hash = await hashPassword(password);
 
     const newTempUser = new TempUser({
+      companyDomain,
       firstName,
       lastName,
       email,
@@ -161,8 +246,6 @@ exports.signup = async (req, res, next) => {
       message: `Your verification code is: ${userSaved.verificationCode}`,
     });
 
-    
-
     return res.status(200).json({
       access_token,
       userSaved,
@@ -180,9 +263,17 @@ exports.signup = async (req, res, next) => {
   }
 };
 
-
 exports.resendVerificationCode = async (req, res) => {
   try {
+    const companyDomain = req.headers.origin.split("//")[1];
+
+    const settings = await Settings.find({ companyDomain });
+
+    if (settings.length === 0) {
+      return res.status(404).json({ message: "Settings not found" });
+    }
+    const companyName = settings[0].companyDomain;
+
     const verifiedID = req.auth.userId;
 
     const tempUser = await TempUser.findById(verifiedID);
@@ -195,18 +286,55 @@ exports.resendVerificationCode = async (req, res) => {
     // Generate a new verification code and update the timestamp
     tempUser.generateVerificationCode();
 
-     await tempUser.save();
+    await tempUser.save();
 
-        const access_token = signToken(tempUser._id);
+    const access_token = signToken(tempUser._id);
 
+    const html = `
+              <body style="margin: 0; padding: 0; background: #f8f9fb; text-align: center;">
+    <table role="presentation" width="100%" height="100%" cellspacing="0" cellpadding="0" border="0">
+        <tr>
+            <td align="center" valign="middle">
+                <table role="presentation" width="600" cellspacing="0" cellpadding="0" border="0" style="background: white; padding: 25px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1); text-align: center; border: 1px solid #ddd;">
+                    <tr>
+                        <td style="font-size: 18px; font-weight: bold; color: #333; padding-bottom: 15px;">
+                            You have requested a One-Time Password for ${companyName}.
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="background: #f4f4f4; padding: 15px; border-radius: 8px; display: inline-block; font-size: 28px; font-weight: bold; color: #000; letter-spacing: 2px; width: auto; min-width: 120px; text-align: center;">
+                            ${tempUser.verificationCode}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="font-size: 14px; color: #555; padding-top: 10px;">
+                            This code is only valid for 10 minutes. <strong>DO NOT SHARE</strong>. ${companyName} agents will never ask for this code.
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="font-size: 14px; color: #555; padding-top: 10px;">
+                            If you didn't request this, please ensure your account security is up to date.
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="font-size: 12px; color: #777; border-top: 1px solid #ddd; padding-top: 15px;">
+                            &copy; 2025 ${companyName}. All rights reserved.
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+            `;
 
     // Resend the verification email
     await sendMail({
       email: tempUser.email,
       subject: "Resend Email Verification",
-      message: `Your new verification code is: ${tempUser.verificationCode}`,
+      //message: `Your new verification code is: ${tempUser.verificationCode}`,
+      html,
     });
-
 
     return res.status(200).json({
       access_token,
@@ -222,9 +350,9 @@ exports.resendVerificationCode = async (req, res) => {
   }
 };
 
-
 exports.verifyEmail = async (req, res) => {
   try {
+    const companyDomain = req.headers.origin.split("//")[1];
     const { verificationCode } = req.body;
     const verifiedID = req.auth.userId;
 
@@ -235,25 +363,38 @@ exports.verifyEmail = async (req, res) => {
     const tempUser = await TempUser.findById(verifiedID);
 
     if (!tempUser) {
-      return res.status(404).json({ message: "No verification record found.", status: 404 });     
+      return res
+        .status(404)
+        .json({ message: "No verification record found.", status: 404 });
     }
 
     if (
       tempUser.verificationCode !== verificationCode ||
       new Date() > tempUser.verificationCodeExpiresAt
     ) {
-      return res
-        .status(400)
-        .json({ message: "Invalid or expired verification code.",
-          status: 400,
-         });
+      return res.status(400).json({
+        message: "Invalid or expired verification code.",
+        status: 400,
+      });
     }
 
     // Move data to User collection
     const { displayName, password, email, firstName, lastName } = tempUser;
 
-    const role = await Role.findOne({name: "guest"});
+    const userNewData = await User.findOne({ companyDomain, email }).lean();
+    if (!!userNewData) {
+      return res.status(409).json([
+        {
+          type: "email",
+          message: "The email address is already in use",
+          status: 409,
+        },
+      ]);
+    }
+
+    const role = await Role.findOne({ name: "guest" });
     const newUser = new User({
+      companyDomain,
       displayName,
       firstName,
       lastName,
@@ -274,7 +415,7 @@ exports.verifyEmail = async (req, res) => {
 
     const userSaved = await newUser.save();
 
-    const user = await getUserWithUnitsMembers(userSaved._id);
+    const user = await getUserWithUnitsMembers(companyDomain, userSaved._id);
     const access_token = signToken(user._id);
 
     res.status(200).json({
@@ -285,7 +426,6 @@ exports.verifyEmail = async (req, res) => {
 
     // Remove the temp user record
     await TempUser.deleteOne({ _id: verifiedID });
-
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "Internal server error.", status: 500 });
@@ -294,11 +434,12 @@ exports.verifyEmail = async (req, res) => {
 
 exports.addUser = async (req, res, next) => {
   try {
+    const companyDomain = req.headers.origin.split("//")[1];
     const data = JSON.parse(req.body.user);
-    const url = req.protocol + '://' + req.get('host');
+    const url = req.protocol + "://" + req.get("host");
 
     Object.keys(req.files).forEach((key, index) => {
-      data[key] = url + '/images/' + req.files[key][0].filename;
+      data[key] = url + "/images/" + req.files[key][0].filename;
     });
 
     const {
@@ -324,13 +465,13 @@ exports.addUser = async (req, res, next) => {
       isVerified,
     } = data;
 
-    const userNewData = await User.findOne({ email }).lean();
+    const userNewData = await User.findOne({ companyDomain, email }).lean();
 
     if (!!userNewData) {
       return res.status(500).json([
         {
-          type: 'email',
-          message: 'The email address is already in use',
+          type: "email",
+          message: "The email address is already in use",
         },
       ]);
     }
@@ -338,6 +479,7 @@ exports.addUser = async (req, res, next) => {
     const hash = await hashPassword(password);
 
     const newUser = new User({
+      companyDomain,
       background,
       avatar,
       role,
@@ -358,13 +500,12 @@ exports.addUser = async (req, res, next) => {
       password: hash,
       isActive,
       isVerified,
-
     });
     const addedUser = await newUser.save();
 
     return res.status(200).json({
       addedUser,
-      message: 'User Added Successfully!',
+      message: "User Added Successfully!",
     });
   } catch (error) {
     console.error(error);
@@ -374,32 +515,41 @@ exports.addUser = async (req, res, next) => {
 
 exports.login = async (req, res, next) => {
   try {
+    const companyDomain = req.headers.origin.split("//")[1];
     const { email, password } = req.body;
-
-    const userNewData = await User.findOne({ email }).lean();
+    const userNewData = await User.findOne({
+      companyDomain,
+      email,
+    }).lean();
 
     if (!userNewData) {
       return res.status(404).json([
         {
-          type: 'email',
-          message: 'User not Found, Please sign-Up!',
+          type: "email",
+          message: "User not Found, Please sign-Up!",
           status: 404,
         },
       ]);
+    }
+
+    if (!userNewData.isActive) {
+      return res.status(400).json({
+        message: "Account has been deactivated",
+      });
     }
 
     const isMatch = await bcrypt.compare(password, userNewData.password);
     if (!isMatch) {
       return res.status(401).json([
         {
-          type: 'password',
-          message: 'Incorrect Password',
+          type: "password",
+          message: "Incorrect Password",
           status: 401,
         },
       ]);
     }
 
-    const user = await getUserWithUnitsMembers(userNewData._id);
+    const user = await getUserWithUnitsMembers(companyDomain, userNewData._id);
 
     const access_token = signToken(user._id);
 
@@ -415,11 +565,14 @@ exports.login = async (req, res, next) => {
 
 exports.update = async (req, res, next) => {
   try {
+    const companyDomain = req.headers.origin.split("//")[1];
+
     const { userId: authId } = req.auth;
 
     const userId = req.params.id;
     const userNewData = JSON.parse(req.body.user);
     const user = await User.findOne({
+      companyDomain,
       email: userNewData.emails[0]?.email,
     }).lean();
 
@@ -488,12 +641,15 @@ exports.update = async (req, res, next) => {
     }
 
     const userUpdated = await User.findOneAndUpdate(
-      { _id: userId }, // find the user by id
+      { companyDomain, _id: userId }, // find the user by id
       userNewData,
       { new: true } // updated data
     );
 
-    const updatedUser = await getUserWithUnitsMembers(userUpdated._id);
+    const updatedUser = await getUserWithUnitsMembers(
+      companyDomain,
+      userUpdated._id
+    );
 
     if (userNewData.newPassword) {
       updatedUser.newPassword = userNewData.newPassword;
@@ -512,11 +668,17 @@ exports.update = async (req, res, next) => {
 exports.delete = async (req, res) => {
   const userId = req.params.id;
   try {
-    const deleteUser = await User.findByIdAndRemove({ _id: userId });
+    const companyDomain = req.headers.origin.split("//")[1];
+    const userId = req.params.id;
+
+    const deleteUser = await User.findByIdAndRemove({
+      companyDomain,
+      _id: userId,
+    });
     if (!deleteUser) {
-      return res.status(404).json({ error: 'User no found' });
+      return res.status(404).json({ error: "User no found" });
     }
-    return res.status(200).json({ message: 'User deleted Successfully' });
+    return res.status(200).json({ message: "User deleted Successfully" });
   } catch (error) {
     console.error(error);
     return res.status(500).json({ message: error.message });
@@ -525,11 +687,12 @@ exports.delete = async (req, res) => {
 
 exports.logout = async (req, res, next) => {
   try {
+    const companyDomain = req.headers.origin.split("//")[1];
     const { userId } = req.auth;
 
     // Update user status to "offline"
 
-    return res.status(200).json({ message: 'User logged out successfully' });
+    return res.status(200).json({ message: "User logged out successfully" });
   } catch (error) {
     console.error(error);
     return res.status(500).json({ message: error.message });
@@ -539,33 +702,98 @@ exports.logout = async (req, res, next) => {
 //Reset password code WEALTH
 exports.forgetpassword = CatchErrorFunc(async (req, res, next) => {
   const { email } = req.body;
-  const user = await User.findOne({ email });
+  const companyDomain = req.headers.origin.split("//")[1];
+  const user = await User.findOne({
+    email,
+    companyDomain,
+  });
 
   if (!user) {
-    throw new HandleError(400, 'User with this email is not found', 400);
+    throw new HandleError(400, "User with this email is not found", 400);
   }
+
+  const settings = await Settings.find({ companyDomain });
+
+  if (settings.length === 0) {
+    return res.status(404).json({ message: "Settings not found" });
+  }
+  const companyName = settings[0].companyDomain;
 
   const resetToken = user.generatePasswordResetToken();
   await user.save({ ValidateBeforeSave: false });
 
-  const resetUrl = `${req.get('origin')}/auth/reset-password/${resetToken}`;
+  const html = `
+  <body style="margin: 0; padding: 0; background: #f8f9fb; text-align: center;">
+    <table role="presentation" width="100%" height="100%" cellspacing="0" cellpadding="0" border="0">
+        <tr>
+            <td align="center" valign="middle">
+                <table role="presentation" width="600" cellspacing="0" cellpadding="0" border="0" style="background: white; padding: 25px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1); text-align: center; border: 1px solid #ddd;">
+    
+                    <tr>
+                        <td style="font-size: 18px; font-weight: bold; color: #333; padding-bottom: 15px;">
+                            Password Reset Request for <strong>${companyName}</strong>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="font-size: 14px; color: #555;">Dear <strong>${
+                          user.email
+                        }</strong>,</td>
+                    </tr>
+                    <tr>
+                        <td style="font-size: 14px; color: #555; padding: 10px 20px;">
+                            We received a request to reset your password for your ${companyName} account. 
+                            To proceed with resetting your password, please click the link below:
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 20px 0;">
+                            <a href="${req.get(
+                              "origin"
+                            )}/auth/reset-password/${resetToken}" style="display: inline-block; background: black; color: white; padding: 12px 20px; text-decoration: none; border-radius: 5px; font-size: 16px; font-weight: bold;">
+                                Reset Password
+                            </a>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="font-size: 12px; color: #777;">
+                            If you did not request a password reset, please ignore this email. Your password will remain unchanged.
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="font-size: 12px; color: #777;">
+                            If you have any questions or need further assistance, feel free to reach out to our support team.
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="font-size: 12px; color: #777; border-top: 1px solid #ddd; padding-top: 15px;">
+                            <p>Thank you,</p>
+                            <p><strong>${companyName} Team</strong></p>
+                            <p style="font-size: 10px;">This is an automated message, please do not reply.</p>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>`;
+  //const resetUrl = `${req.get("origin")}/auth/reset-password/${resetToken}`;
 
-  const message =
-    'Forgot password? click on this link to reset your password ' +
-    resetUrl +
-    ' this link will be valid for only 10min.';
-  
+  // const message =
+  //   "Forgot password? click on this link to reset your password " +
+  //   resetUrl +
+  //   " this link will be valid for only 10min.";
 
   try {
     await sendMail({
       email: user.email,
-      subject: 'Reset password',
-      message: message,
+      subject: "Reset password",
+      //message: message,
+      html,
     });
 
     res.status(200).json({
       success: true,
-      message: 'Password reset link sent successfully',
+      message: "Password reset link sent successfully",
     });
   } catch (error) {
     (user.passwordResetToken = undefined),
@@ -574,25 +802,26 @@ exports.forgetpassword = CatchErrorFunc(async (req, res, next) => {
 
     res.status(500).json({
       success: false,
-      message: 'Unable to send mail',
+      message: "Unable to send mail",
     });
   }
 });
 
 exports.reset_password = async (req, res) => {
   //Checking if the user exist with the given token and if the token has expired
-
+  const companyDomain = req.headers.origin.split("//")[1];
   const token = crypto
-    .createHash('sha256')
+    .createHash("sha256")
     .update(req.params.token)
-    .digest('hex');
+    .digest("hex");
   const user = await User.findOne({
     passwordResetToken: token,
+    companyDomain,
     passwordResetExpires: { $gt: Date.now() },
   }).lean();
 
   if (!user) {
-    return res.status(400).json({ message: 'Link is invalid or expired' });
+    return res.status(400).json({ message: "Link is invalid or expired" });
   }
 
   //  Reseting the user password
@@ -601,7 +830,7 @@ exports.reset_password = async (req, res) => {
     user.confirmPassword = req.body.confirmPassword;
 
     if (user.confirmPassword !== user.password) {
-      return res.status(400).json({ message: 'Your passwords do not match' });
+      return res.status(400).json({ message: "Your passwords do not match" });
     }
 
     user.passwordResetToken = undefined;
@@ -618,19 +847,22 @@ exports.reset_password = async (req, res) => {
       { new: true } // updated data
     );
 
-    const updatedUser = await getUserWithUnitsMembers(userUpdated._id);
+    const updatedUser = await getUserWithUnitsMembers(
+      companyDomain,
+      userUpdated._id
+    );
 
     return res.status(200).json({
       updatedUser,
-      message: 'Updated successfully!',
+      message: "Updated successfully!",
     });
   } catch (error) {
-    (user.passwordResetToken = undefined),
+    console.error(error)((user.passwordResetToken = undefined)),
       (user.passwordResetExpires = undefined);
 
     res.status(500).json({
       success: false,
-      message: 'Unable to reset user password',
+      message: "Unable to reset user password",
     });
     console.log(error);
   }
@@ -645,7 +877,7 @@ exports.getRandomUserAvatars = async (req, res) => {
 
     // Shuffle the user array and pick the first 5 users
     const shuffledUsers = getUsers.sort(() => 0.5 - Math.random());
-    const avatars = shuffledUsers.slice(0, 5).map(user => user.avatar);
+    const avatars = shuffledUsers.slice(0, 5).map((user) => user.avatar);
 
     return res.status(200).json({ avatars });
   } catch (error) {
@@ -653,19 +885,80 @@ exports.getRandomUserAvatars = async (req, res) => {
   }
 };
 
-
-
 exports.setGuest = async (req, res) => {
   try {
-    const guestRole = await Role.findOne({name: "guest"});
+    const staffRole = await Role.findOne({ name: "staff" });
     const users = await User.find({});
 
-    for (const user of users) {
-      user.roleId = guestRole._id;
+    users.forEach(async (user) => {
+      user.roleId = staffRole._id;
+      if (!user.firstName || !user.lastName) {
+        user.firstName = user.displayName;
+        user.lastName = user.displayName;
+      }
       await user.save();
-    }
-    return res.status(200).json({message: "Successfully set all users to guest"})
+    });
+    return res
+      .status(200)
+      .json({ message: "Successfully set all users to guest" });
   } catch (error) {
-    return res.status(500).json({message: "Server error"})
+    return res.status(500).json({ message: "Server error" });
   }
-}
+};
+
+exports.setUserJobPosition = async (req, res) => {
+  try {
+    const users = await User.find({});
+    users.forEach(async (user) => {
+      user.jobPosition = null;
+      if (!user.firstName || !user.lastName) {
+        user.firstName = user.displayName;
+        user.lastName = user.displayName;
+      }
+      await user.save();
+    });
+
+    // for (let user of users) {
+    //   user.jobPosition = null;
+    // }
+
+    return res
+      .status(200)
+      .json({ message: "Successfully set all users job position to null" });
+  } catch (error) {
+    console.log({ error });
+    return res.status(500).json({ message: "Server error" });
+  }
+};
+
+exports.createDefaultWeights = async (req, res) => {
+  try {
+    const defaultWeights = [
+      { name: "Task", icon: "#007BFF" },
+      { name: "Request", icon: "#6F42C1" },
+      { name: "Report", icon: "#6C757D" },
+    ];
+
+    // Check which weights are missing
+    const existingWeights = await Weight.find({
+      name: { $in: defaultWeights.map((w) => w.name) },
+    });
+
+    const existingNames = new Set(existingWeights.map((w) => w.name));
+
+    const weightsToInsert = defaultWeights.filter(
+      (w) => !existingNames.has(w.name)
+    );
+
+    if (weightsToInsert.length > 0) {
+      await Weight.insertMany(weightsToInsert);
+    }
+
+    return res
+      .status(200)
+      .json({ message: "Default weights ensured", added: weightsToInsert });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: "An error occurred!" });
+  }
+};

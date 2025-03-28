@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 
 const unsentNotificationSchema = mongoose.Schema({
+  companyDomain:{type: String},
   senderId: String,
   receiverId: String,
   description: String,

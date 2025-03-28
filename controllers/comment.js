@@ -3,6 +3,7 @@ const User = require('../models/user');
 
 exports.addComment = async (req, res, next) => {
   try {
+    const companyDomain = req.headers.origin.split('//')[1];
     const { parentId, ...body } = req.body;
 
     // Validate parentId if provided
@@ -16,6 +17,7 @@ exports.addComment = async (req, res, next) => {
     // Create and save the new comment
     const user = await User.findById(body.userId);
     const newComment = new Comment({
+      companyDomain,
       ...body,
       user: { name: user.displayName, avatar: user.avatar },
       parentId,

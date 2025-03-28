@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 const Schema = mongoose.Schema;
 
 const commentSchema = new Schema({
+  companyDomain:{type: String},
   userId: { type: Schema.Types.ObjectId, ref: 'User' },
   user: { name: { type: String }, avatar: { type: String } },
   time: { type: Number },

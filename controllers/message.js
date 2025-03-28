@@ -17,6 +17,7 @@ async function createIndexes() {
 
 exports.sendMessage = async (req, res) => {
   try {
+    const companyDomain = req.headers.origin.split('//')[1];
     const date = new Date();
     const { messageText: content, subject, link } = req.body;
     const { contactId } = req.params;
@@ -26,7 +27,6 @@ exports.sendMessage = async (req, res) => {
     const images = req.files?.picture || [];
     const documents = req.files?.document || [];
 
-    console.log(images, documents);
 
     // File paths and names (already saved by multer)
     const uploadedImages = images.map((image) => ({
@@ -39,7 +39,6 @@ exports.sendMessage = async (req, res) => {
       name: document.originalname,
     }));
 
-    console.log(uploadedImages, uploadedDocuments);
 
     // Find or create chat
     let chat = await Chat.findOne({
@@ -48,6 +47,7 @@ exports.sendMessage = async (req, res) => {
 
     if (!chat) {
       chat = new Chat({
+        companyDomain,
         participants: [userId, contactId],
         messages: [],
       });
@@ -55,6 +55,7 @@ exports.sendMessage = async (req, res) => {
 
     // Create a new message
     const message = new Message({
+      companyDomain,
       chatId: chat._id,
       avatar,
       userId,
@@ -66,8 +67,6 @@ exports.sendMessage = async (req, res) => {
       link,
       isEdited: false,
     });
-
-    console.log("Message:", message);
 
     // Save message first before updating chat
     await message.save();
