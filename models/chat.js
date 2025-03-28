@@ -2,6 +2,7 @@ const mongoose = require("mongoose");
 
 const chatSchema = new mongoose.Schema(
   {
+    companyDomain:{type: String},
     participants: [
       {
         type: mongoose.Schema.Types.ObjectId,

@@ -1,7 +1,8 @@
 const mongoose = require("mongoose");
 
 const tempUserSchema = new mongoose.Schema({
-  email: { type: String, required: true, unique: true },
+  companyDomain:{type: String},
+  email: { type: String, required: true },
   firstName: {type: String, required: true},
   lastName: {type: String, required: true},
   displayName: { type: String },
@@ -13,6 +14,7 @@ const tempUserSchema = new mongoose.Schema({
 // Generate a 6-digit verification code
 tempUserSchema.methods.generateVerificationCode = function () {
   const code = Math.floor(100000 + Math.random() * 900000).toString();
+  console.log({code})
   this.verificationCode = code;
   this.verificationCodeExpiresAt = Date.now() + 15 * 60 * 1000; // 15 minutes
   return code;

@@ -3,6 +3,7 @@ const User = require('../models/user');
 const fs = require('fs');
 
 exports.getPosts = async (req, res, next) => {
+    companyDomain = req.headers.origin.split('//')[1];
     const postsPerFetch = 10;
     const count = Number(req.query.count) || 0;
 
@@ -11,6 +12,9 @@ exports.getPosts = async (req, res, next) => {
 
     try {
         const postsWithComments = await Post.aggregate([
+            {
+                $match: { companyDomain } // Ensure this field exists in the Post collection
+            },
             {
                 $lookup: {
                     from: 'comments', // The name of the comments collection
@@ -25,7 +29,7 @@ exports.getPosts = async (req, res, next) => {
             { $skip: skip },
             { $limit: limit }      
         ]);
-
+        
         return res.status(200).json(postsWithComments);
     } catch (error) {
         console.error(error);
@@ -33,6 +37,7 @@ exports.getPosts = async (req, res, next) => {
 };
 
 exports.addPost = async (req, res, next) => {
+    companyDomain = req.headers.origin.split('//')[1];
     try {
     
         const { userId, text } = JSON.parse(req.body.post);
@@ -40,6 +45,7 @@ exports.addPost = async (req, res, next) => {
         const user = await User.findById({ _id: userId });
 
         const data = {
+            companyDomain,
             userId,
             text,
             user: { name: user.displayName, avatar: user.avatar },

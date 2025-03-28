@@ -5,7 +5,7 @@ const multer = require('../middlewares/multer-config');
 const settingsCtrl = require("../controllers/settings")
 
 
-router.patch('/logo', auth, multer, settingsCtrl.updateLogo)
-router.get('/logo', settingsCtrl.getLogo)
+router.patch('/company', multer, settingsCtrl.updateLogo)
+router.get('/company', settingsCtrl.getLogo)
 
 module.exports = router;

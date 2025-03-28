@@ -3,6 +3,7 @@ const Comment = require("./comment");
 const Schema = mongoose.Schema;
 
 const postSchema = new Schema({
+  companyDomain:{type: String},
   userId: {type: Schema.Types.ObjectId, ref: "User" },
   user: { name: { type: String }, avatar: { type: String } },
   text: { type: String },

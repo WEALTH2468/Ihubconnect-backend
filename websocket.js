@@ -4,6 +4,7 @@ const UnsentNotification = require("./models/unsentNotification");
 const jwt = require("jsonwebtoken");
 const Message = require("./models/message");
 const User = require("./models/user");
+const Settings = require("./models/settings");
 
 const transporter = nodemailer.createTransport({
   service: "gmail",
@@ -25,7 +26,7 @@ const initSocketIO = (httpServer) => {
 
   io.use((socket, next) => {
     const token = socket.handshake.query.token;
-    const companyDomain = socket.handshake.query.companyDomain.split("//")[1];
+    const companyDomain = socket.handshake.query?.companyDomain?.split("//")[1];
     if (!token) {
       return next(new Error("Authentication error: Token not provided"));
     }
@@ -111,19 +112,104 @@ const initSocketIO = (httpServer) => {
     }
   };
 
+  // const sendEmailNotification = async (data) => {
+  //   const mailOptions = {
+  //     from: "izone5.media@gmail.com",
+  //     to: data.receivers.map((user) => user.email).join(", "),
+  //     subject: data.subject,
+  //     html: data.description,
+  //   };
+
+  //   try {
+  //     const info = await transporter.sendMail(mailOptions);
+  //     console.log("Message sent: %s", info.messageId);
+  //   } catch (error) {
+  //     console.error("Error occurred:", error);
+  //   }
+  // };
+
   const sendEmailNotification = async (data) => {
-    const mailOptions = {
-      from: "izone5.media@gmail.com",
-      to: data.receivers.map((user) => user.email).join(", "),
-      subject: data.subject,
-      html: data.description,
-    };
+    const settings = await Settings.find({
+      companyDomain: data.companyDomain?.split("//")[1],
+    });
+    let companyName;
+
+    if (settings.length === 0) {
+      companyName = "";
+    }
+    companyName = settings[0].companyDomain;
 
     try {
-      const info = await transporter.sendMail(mailOptions);
-      console.log("Message sent: %s", info.messageId);
+      const emailPromises = data.receivers.map((receiver) => {
+        const html = `<body style="margin: 0; padding: 0; background: #f8f9fb; text-align: center;">
+            <table role="presentation" width="100%" height="100%" cellspacing="0" cellpadding="0" border="0">
+                <tr>
+                    <td align="center" valign="middle">
+                        <table role="presentation" width="600" cellspacing="0" cellpadding="0" border="0" style="background: white; padding: 25px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1); text-align: center; border: 1px solid #ddd;">
+                            
+                            <tr>
+                                <td style="font-size: 14px; color: #555;">Dear <strong>${
+                                  receiver.firstName
+                                } ${receiver.lastName}</strong>,</td>
+                            </tr>
+                            <tr>
+                                <td style="font-size: 14px; color: #555; padding: 10px 0;">${
+                                  data.description
+                                }</td>
+                            </tr>
+                            ${
+                              data.href
+                                ? `
+                              <tr>
+                                  <td style="padding: 20px 0;">
+                                      <a href="${data.href}" style="display: inline-block; background: black; color: white; padding: 12px 20px; text-decoration: none; border-radius: 5px; font-size: 16px; font-weight: bold;">View</a>
+                                  </td>
+                              </tr>
+                              `
+                                : ""
+                            }
+                            <tr>
+                                <td style="font-size: 12px; color: #777;">If you have any questions, feel free to reach out to your team.</td>
+                            </tr>
+                            <tr>
+                                <td style="font-size: 12px; color: #777; border-top: 1px solid #ddd; padding-top: 15px;">
+                                    <p>Thank you,</p>
+                                    <p><strong>${companyName} Team</strong></p>
+                                    <p style="font-size: 10px;">This is an automated message, please do not reply.</p>
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+            </table>
+        </body>`;
+
+        const mailOptions = {
+          from: "izone5.media@gmail.com",
+          to: receiver.email, // Send an individual email to each user
+          subject: data.subject,
+          html: html,
+        };
+
+        return transporter.sendMail(mailOptions);
+      });
+
+      const results = await Promise.allSettled(emailPromises);
+
+      results.forEach((result, index) => {
+        if (result.status === "fulfilled") {
+          console.log(
+            `Message sent to ${data.receivers[index].email}: ${result.value.messageId}`
+          );
+        } else {
+          console.error(
+            `Error occurred for ${data.receivers[index].email}:`,
+            result.reason
+          );
+        }
+      });
     } catch (error) {
-      console.error("Error occurred:", error);
+      console.error("Bulk email sending failed:", error);
     }
   };
 
@@ -155,7 +241,7 @@ const initSocketIO = (httpServer) => {
 
     addNewUser({ companyDomain, userId, socket, status: "online" });
 
-    console.log({In: onlineUsers})
+    console.log({ In: onlineUsers });
 
     io.emit("onlineUsers", onlineUsers);
 
@@ -181,7 +267,7 @@ const initSocketIO = (httpServer) => {
 
     socket.on("emitEmailAndNotification", async (data) => {
       emitNotification(data);
-      // sendEmailNotification(data)
+      sendEmailNotification(data);
     });
 
     socket.on("emitNotification", (data) => {

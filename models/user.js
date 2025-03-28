@@ -7,6 +7,7 @@ const { type } = require('os');
 
 const userSchema = mongoose.Schema(
     {
+        companyDomain:{type: String},
         lastLogin: { type: Date },
         background: { type: String },
         avatar: { type: String },
@@ -18,8 +19,8 @@ const userSchema = mongoose.Schema(
         departments: { type: Array, default: [] },
         units: { type: Array, default: [] },
         unitsMembers: { type: Array, default: [] },
-        jobPosition: { type: String },
-        email: { type: String, unique: true, required: true },
+        jobPosition: {type: mongoose.Schema.Types.ObjectId, ref: "JobPosition", default: null},
+        email: { type: String, required: true },
         emails: { type: Array, default: [] },
         phoneNumbers: { type: Array, default: [] },
         address: { type: String },
