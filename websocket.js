@@ -212,6 +212,13 @@ const initSocketIO = (httpServer) => {
       }
     });
 
+    socket.on("markMessageAsSeen", async ({ messageId, senderId }) => {
+      // Update message in DB
+      await Message.findByIdAndUpdate(messageId, { seen: true });   
+      // Notify the sender that the message has been seen
+      io.to(senderId).emit("messageSeen", { messageId });
+    });
+
     socket.on("updateStatus", async (data) => {
       onlineUsers[userId][1] = data;
       io.emit("onlineUsers", onlineUsers);

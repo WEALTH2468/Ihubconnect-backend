@@ -26,7 +26,7 @@ exports.sendMessage = async (req, res) => {
     const images = req.files?.picture || [];
     const documents = req.files?.document || [];
 
-    console.log(images, documents);
+    
 
     // File paths and names (already saved by multer)
     const uploadedImages = images.map((image) => ({
@@ -39,7 +39,7 @@ exports.sendMessage = async (req, res) => {
       name: document.originalname,
     }));
 
-    console.log(uploadedImages, uploadedDocuments);
+   
 
     // Find or create chat
     let chat = await Chat.findOne({
