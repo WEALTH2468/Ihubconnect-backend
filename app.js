@@ -28,7 +28,6 @@ const categoryRoutes = require("./routes/category");
 const User = require("./models/user");
 const Comment = require("./models/comment");
 const Post = require("./models/post");
-const Document = require("./models/document");
 const Notification = require("./models/notification");
 const UnsentNotification = require("./models/unsentNotification");
 
@@ -58,7 +57,7 @@ function connectToDatabase() {
         // await generateChat()
         console.log("Connected to local MongoDB");
         await createDefaultRolesIfAbsent();
-        await createDefaultWeights();
+        // await createDefaultWeights();
         resolve();
       })
       .catch((error) => {
@@ -73,7 +72,7 @@ function connectToDatabase() {
           .then(async () => {
             console.log("Connected to remote MongoDB");
             await createDefaultRolesIfAbsent();
-            //await createDefaultWeights();
+            // await createDefaultWeights();
             resolve();
           })
           .catch((fallbackError) => {
@@ -115,46 +114,36 @@ app.use(
 app.use("/logo", express.static(path.join(__dirname, "logo")));
 app.use("/posts", postRoutes);
 app.use("/comments", commentRoutes);
-app.use("/documents", documentRoutes);
 app.use("/ihub", userRoutes);
 app.use("/notifications", notificationRoutes);
 app.use("/roles", roleRoutes);
 app.use("/settings", settingsRoutes);
-app.use("/departments", departmentRoutes);
-app.use("/units", unitRoutes);
-app.use("/feedbacks", feedbackRoutes);
-app.use("/room", roomRoutes);
-app.use("/chat", messageRoutes);
-app.use("/reaction", reactionRoutes);
-app.use("/readReceipt", readReceiptRoutes);
+app.use("/chat", messageRoutes)
 app.use("/customers", customerRoutes);
-app.use("/course", courseRoutes);
-app.use("/lesson", lessonRoutes);
-app.use("/quiz", quizRoutes);
 app.use("/quotes", quoteRoutes);
 app.use("/items", itemRoutes);
 app.use("/permissions", permissionRoutes);
-app.use("/move-data", require("./routes/moveRoute"));
+// app.use("/move-data", require("./routes/moveRoute"));
 // category
 app.use("/category", categoryRoutes);
 
 //Performance
-iperformanceRoutes.forEach((route) => {
-  app.use(route.basePath, route.routes);
-});
+// iperformanceRoutes.forEach((route) => {
+//   app.use(route.basePath, route.routes);
+// });
 
 // Dashboard
-app.use("/dashboard", dashboardRoutes);
+// app.use("/dashboard", dashboardRoutes);
 
-//team
-app.use("/team", teamRoutes);
-app.use("/teammate", teammateRoutes);
-app.use("/settings/attachmentType", attachmentTypeRoutes);
-app.use("/time/attendant", attendantRoutes);
-app.use("/settings/responsibility", responsibilityRoutes);
-app.use("/checkIn", checkInRoutes);
-app.use("/settings/job-positions", jobPositionRoutes);
-app.use("/settings/weights", weightRoutes);
+// //team
+// app.use("/team", teamRoutes);
+// app.use("/teammate", teammateRoutes);
+// app.use("/settings/attachmentType", attachmentTypeRoutes);
+// app.use("/time/attendant", attendantRoutes);
+// app.use("/settings/responsibility", responsibilityRoutes);
+// app.use("/checkIn", checkInRoutes);
+// app.use("/settings/job-positions", jobPositionRoutes);
+// app.use("/settings/weights", weightRoutes);
 
 async function updateUsers() {
   const users = await User.find({});
