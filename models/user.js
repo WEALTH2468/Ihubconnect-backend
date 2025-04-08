@@ -4,6 +4,7 @@ const Comment = require('./comment');
 const uniqueValidator = require('mongoose-unique-validator');
 const crypto = require('crypto');
 const { type } = require('os');
+const jobp = require("./jobPosition")
 
 const userSchema = mongoose.Schema(
     {

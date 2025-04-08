@@ -137,7 +137,7 @@ const initSocketIO = (httpServer) => {
     if (settings.length === 0) {
       companyName = "";
     }
-    companyName = settings[0].companyDomain;
+    companyName = settings[0]?.companyDomain;
 
     try {
       const emailPromises = data.receivers.map((receiver) => {
