@@ -7,55 +7,27 @@ const cron = require("node-cron");
 
 const app = express();
 const { differenceInDays } = require("date-fns");
-const Task = require("./modules/iperformance/task/task.model");
 const Role = require("./models/rbac/role");
 const Chat = require("./models/chat");
-const Weight = require("./models/weight");
 
 const userRoutes = require("./routes/user");
 const customerRoutes = require("./routes/customer");
 const postRoutes = require("./routes/post");
 const commentRoutes = require("./routes/comment");
-const documentRoutes = require("./routes/document");
 const notificationRoutes = require("./routes/notification");
-
 const roleRoutes = require("./routes/rbac/role");
 const permissionRoutes = require("./routes/rbac/permission");
 
 const settingsRoutes = require("./routes/settings");
-const departmentRoutes = require("./routes/department");
-const unitRoutes = require("./routes/unit");
-const feedbackRoutes = require("./routes/feedback");
-const roomRoutes = require("./routes/room");
 const messageRoutes = require("./routes/message");
-const reactionRoutes = require("./routes/reaction");
-const readReceiptRoutes = require("./routes/readReceipt");
-const courseRoutes = require("./routes/course");
-const lessonRoutes = require("./routes/lesson");
-const quizRoutes = require("./routes/quiz");
 const quoteRoutes = require("./routes/quote");
 const itemRoutes = require("./routes/item");
-const dashboardRoutes = require("./routes/dashboard/iperformance");
-
 // category routes
 const categoryRoutes = require("./routes/category");
-
-const teamRoutes = require("./routes/team");
-const teammateRoutes = require("./routes/teammate");
-const attachmentTypeRoutes = require("./routes/attachmentType");
-const attendantRoutes = require("./routes/attendant");
-const responsibilityRoutes = require("./routes/responsibility");
-const checkInRoutes = require("./routes/checkIn");
-const jobPositionRoutes = require("./routes/jobPosition");
-const weightRoutes = require("./routes/weight");
-
-//iPerformance
-const iperformanceRoutes = require("./routes/iperformance");
 
 const User = require("./models/user");
 const Comment = require("./models/comment");
 const Post = require("./models/post");
-const Document = require("./models/document");
 const Notification = require("./models/notification");
 const UnsentNotification = require("./models/unsentNotification");
 
@@ -85,7 +57,7 @@ function connectToDatabase() {
         // await generateChat()
         console.log("Connected to local MongoDB");
         await createDefaultRolesIfAbsent();
-        await createDefaultWeights();
+        // await createDefaultWeights();
         resolve();
       })
       .catch((error) => {
@@ -100,7 +72,7 @@ function connectToDatabase() {
           .then(async () => {
             console.log("Connected to remote MongoDB");
             await createDefaultRolesIfAbsent();
-            //await createDefaultWeights();
+            // await createDefaultWeights();
             resolve();
           })
           .catch((fallbackError) => {
@@ -142,72 +114,36 @@ app.use(
 app.use("/logo", express.static(path.join(__dirname, "logo")));
 app.use("/posts", postRoutes);
 app.use("/comments", commentRoutes);
-app.use("/documents", documentRoutes);
 app.use("/ihub", userRoutes);
 app.use("/notifications", notificationRoutes);
 app.use("/roles", roleRoutes);
 app.use("/settings", settingsRoutes);
-app.use("/departments", departmentRoutes);
-app.use("/units", unitRoutes);
-app.use("/feedbacks", feedbackRoutes);
-app.use("/room", roomRoutes);
-app.use("/chat", messageRoutes);
-app.use("/reaction", reactionRoutes);
-app.use("/readReceipt", readReceiptRoutes);
+app.use("/chat", messageRoutes)
 app.use("/customers", customerRoutes);
-app.use("/course", courseRoutes);
-app.use("/lesson", lessonRoutes);
-app.use("/quiz", quizRoutes);
 app.use("/quotes", quoteRoutes);
 app.use("/items", itemRoutes);
 app.use("/permissions", permissionRoutes);
-app.use("/move-data", require("./routes/moveRoute"));
+// app.use("/move-data", require("./routes/moveRoute"));
 // category
 app.use("/category", categoryRoutes);
 
-Performance;
-iperformanceRoutes.forEach((route) => {
-  app.use(route.basePath, route.routes);
-});
-
-// iperformance refactor
-app.use(
-  "/iperformance/tasks",
-  require("./modules/iperformance/task/task.route")
-);
-app.use(
-  "/iperformance/goals",
-  require("./modules/iperformance/goal/goal.route")
-);
-app.use(
-  "/iperformance/objectives",
-  require("./modules/iperformance/objective/objective.route")
-);
-// app.use(
-//   "/iperformance/challenges",
-//   require("./modules/iperformance/challenge/challenge.route")
-// );
-// app.use(
-//   "/iperformance/risks",
-//   require("./modules/iperformance/risk/risk.route")
-// );
-// app.use(
-//   "/iperformance/periods",
-//   require("./modules/iperformance/period/period.route")
-// );
+//Performance
+// iperformanceRoutes.forEach((route) => {
+//   app.use(route.basePath, route.routes);
+// });
 
 // Dashboard
-app.use("/dashboard", dashboardRoutes);
+// app.use("/dashboard", dashboardRoutes);
 
-//team
-app.use("/team", teamRoutes);
-app.use("/teammate", teammateRoutes);
-app.use("/settings/attachmentType", attachmentTypeRoutes);
-app.use("/time/attendant", attendantRoutes);
-app.use("/settings/responsibility", responsibilityRoutes);
-app.use("/checkIn", checkInRoutes);
-app.use("/settings/job-positions", jobPositionRoutes);
-app.use("/settings/weights", weightRoutes);
+// //team
+// app.use("/team", teamRoutes);
+// app.use("/teammate", teammateRoutes);
+// app.use("/settings/attachmentType", attachmentTypeRoutes);
+// app.use("/time/attendant", attendantRoutes);
+// app.use("/settings/responsibility", responsibilityRoutes);
+// app.use("/checkIn", checkInRoutes);
+// app.use("/settings/job-positions", jobPositionRoutes);
+// app.use("/settings/weights", weightRoutes);
 
 async function updateUsers() {
   const users = await User.find({});

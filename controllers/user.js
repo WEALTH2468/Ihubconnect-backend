@@ -962,3 +962,59 @@ exports.createDefaultWeights = async (req, res) => {
     return res.status(500).json({ message: "An error occurred!" });
   }
 };
+
+
+exports.getBirthdayUsers = async (req, res) => {
+  const companyDomain = req.headers.origin.split("//")[1];
+  const today = new Date();
+  
+  try {
+    const users = await User.find(
+      { companyDomain, isActive: true },
+      { password: 0 }
+    ).populate("jobPosition");
+
+    const todayBirthdays = [];
+    const upcomingBirthdays = [];
+
+    const today = new Date();
+    today.setUTCHours(0, 0, 0, 0); // normalize to 00:00 UTC
+    
+    users.forEach(user => {
+      if (!user.birthday) return;
+    
+      const birthday = new Date(user.birthday);
+      const birthMonth = birthday.getUTCMonth(); // 0-11
+      const birthDate = birthday.getUTCDate();   // 1-31
+    
+      const currentYear = today.getUTCFullYear();
+    
+      // Reconstruct birthday for current year at 00:00 UTC
+      const thisYearBirthday = new Date(Date.UTC(currentYear, birthMonth, birthDate));
+    
+      const msInDay = 1000 * 60 * 60 * 24;
+      const diffInDays = Math.floor((thisYearBirthday - today) / msInDay);
+    
+      // Check for today's birthday
+      if (
+        birthMonth === today.getUTCMonth() &&
+        birthDate === today.getUTCDate()
+      ) {
+        todayBirthdays.push(user);
+      }
+      // Check for upcoming birthdays (1-5 days ahead)
+      else if (diffInDays > 0 && diffInDays <= 5) {
+        upcomingBirthdays.push(user);
+      }
+    });
+
+    return res.status(200).json({
+      todayBirthdays,
+      upcomingBirthdays,
+    });
+
+  } catch (err) {
+    console.error("Error fetching birthday users:", err.message);
+    return res.status(500).json({ message: "Failed to fetch birthday users" });
+  }
+};

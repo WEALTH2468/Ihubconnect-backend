@@ -137,7 +137,7 @@ const initSocketIO = (httpServer) => {
     if (settings.length === 0) {
       companyName = "";
     }
-    companyName = settings[0].companyDomain;
+    companyName = settings[0]?.companyDomain;
 
     try {
       const emailPromises = data.receivers.map((receiver) => {
@@ -296,6 +296,13 @@ const initSocketIO = (httpServer) => {
       } else {
         console.error("Receiver not found for message:", data);
       }
+    });
+
+    socket.on("markMessageAsSeen", async ({ messageId, senderId }) => {
+      // Update message in DB
+      await Message.findByIdAndUpdate(messageId, { seen: true });   
+      // Notify the sender that the message has been seen
+      io.to(senderId).emit("messageSeen", { messageId });
     });
 
     socket.on("updateStatus", async (data) => {

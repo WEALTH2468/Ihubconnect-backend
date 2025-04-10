@@ -4,8 +4,11 @@ const router = express.Router();
 const multer = require("../middlewares/multer-config");
 const userCtrl = require("../controllers/user");
 
+
+router.get("/users/birthdays", auth, userCtrl.getBirthdayUsers);
 router.get("/users/all/", auth, userCtrl.getAllUsers);
 router.get("/users/:id", auth, userCtrl.getUsers);
+
 router.get("/chatsidebarusers/:id", auth, userCtrl.getUsersForChatSideBar);
 router.get("/getRandomUserAvatars", userCtrl.getRandomUserAvatars);
 router.get("/refresh", auth, userCtrl.refresh);
@@ -18,6 +21,7 @@ router.post("/resendVerificationCode", auth, userCtrl.resendVerificationCode);
 router.patch("/update/:id", auth, multer, userCtrl.update);
 router.post("/forgetpassword", userCtrl.forgetpassword);
 router.patch("/reset-password/:token", multer, userCtrl.reset_password);
+
 
 // to remove
 router.patch("/set-guest", userCtrl.setGuest);
