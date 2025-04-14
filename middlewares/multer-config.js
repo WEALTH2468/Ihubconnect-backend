@@ -18,6 +18,8 @@ const storage = multer.diskStorage({
       destinationFolder = "document-library";
     } else if (file.fieldname === "logo") {
       destinationFolder = "logo";
+    }  else if (file.fieldname === "banner") {
+      destinationFolder = "banner";
     }
 
     ensureFolderExists(destinationFolder);
@@ -39,6 +41,7 @@ const upload = multer({ storage: storage }).fields([
   { name: "picture", maxCount: 10 },
   { name: "file", maxCount: 20 },
   { name: "logo", maxCount: 3 },
+  { name: "banner", maxCount: 3 },
   { name: "customerPhoto", maxCount: 5 },
   { name: "attachment", maxCount: 10 },
   { name: "checkInOutImage", maxCount: 10 },
