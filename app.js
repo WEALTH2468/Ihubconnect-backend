@@ -112,6 +112,7 @@ app.use(
   express.static(path.join(__dirname, "document-library"))
 );
 app.use("/logo", express.static(path.join(__dirname, "logo")));
+app.use("/banner", express.static(path.join(__dirname, "banner")));
 app.use("/posts", postRoutes);
 app.use("/comments", commentRoutes);
 app.use("/ihub", userRoutes);

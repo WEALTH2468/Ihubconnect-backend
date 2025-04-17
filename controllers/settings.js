@@ -5,7 +5,10 @@ exports.updateLogo = async (req, res, next) => {
   try {
     const companyDomain = req.headers.origin.split("//")[1];
     const company = JSON.parse(req.body.company);
+
+
     let logoPath = null;
+    let bannerPath = null
 
     if (company.logo && company.logo.includes("/logo/")) {
       logoPath = `/logo/${company.logo?.split("/logo/")[1]}`;
@@ -23,11 +26,28 @@ exports.updateLogo = async (req, res, next) => {
       logoPath = `/logo/${req.files.logo[0].filename}`;
     }
 
+    if (company.banner && company.banner.includes("/banner/")) {
+      bannerPath = `/banner/${company.banner?.split("/banner/")[1]}`;
+    }
+
+    if (req.files && Object.keys(req.files).length > 0) {
+      const bannerName = company.banner?.split("/banner/")[1];
+
+      if (bannerName) {
+        fs.unlink("banner/" + bannerName, () => {
+          console.log("File deleted successfully:", bannerName);
+        });
+      }
+
+      bannerPath = `/banner/${req.files.banner[0].filename}`;
+    }
+
     let settings = await Settings.find({ companyDomain });
 
     if (settings.length === 0) {
       company.companyDomain = companyDomain;
       company.logo = logoPath;
+      company.banner = bannerPath;
       settings = new Settings(company);
       savedSettings = await settings.save();
       res.status(200).json(savedSettings);
@@ -35,6 +55,7 @@ exports.updateLogo = async (req, res, next) => {
       settings = settings[0];
 
       settings.logo = logoPath;
+      settings.banner = bannerPath;
       settings.companyName = company.companyName;
       settings.address = company.address;
       settings.phone = company.phone;

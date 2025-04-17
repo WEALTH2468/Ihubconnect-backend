@@ -3,6 +3,7 @@ const mongoose = require("mongoose");
 const settingsSchema = mongoose.Schema({
     companyDomain:{type: String},
     logo:{type: String},
+    banner:{type: String},
     companyName:{type: String},
     address:{type: String},
     phone:{type: String},
