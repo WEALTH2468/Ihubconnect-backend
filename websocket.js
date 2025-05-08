@@ -7,11 +7,13 @@ const User = require("./models/user");
 const Settings = require("./models/settings");
 
 const transporter = nodemailer.createTransport({
-  service: "gmail",
-  auth: {
-    user: "izone5.media@gmail.com",
-    pass: "niwlnbyxupfhcpmm",
-  },
+     service: 'smtp-relay.brevo.com',
+      port: 587,
+      secure: false,
+      auth: {
+        user: "izone5.nigeria@gmail.com",
+        pass: "xsmtpsib-f14b551b5df332e938fd74985c0315fbfce8c88372b026cb4bc7ddd284abf9be-XzUHJEyrVCSdchOp",
+      },
 });
 
 const initSocketIO = (httpServer) => {
