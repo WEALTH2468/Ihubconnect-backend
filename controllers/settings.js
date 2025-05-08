@@ -6,73 +6,68 @@ exports.updateLogo = async (req, res, next) => {
     const companyDomain = req.headers.origin.split("//")[1];
     const company = JSON.parse(req.body.company);
 
+    let logoPath = company.logo?.includes("/logo/")
+      ? `/logo/${company.logo.split("/logo/")[1]}`
+      : null;
 
-    let logoPath = null;
-    let bannerPath = null
+    let bannerPath = company.banner?.includes("/banner/")
+      ? `/banner/${company.banner.split("/banner/")[1]}`
+      : null;
 
-    if (company.logo && company.logo.includes("/logo/")) {
-      logoPath = `/logo/${company.logo?.split("/logo/")[1]}`;
-    }
-
-    if (req.files && Object.keys(req.files).length > 0) {
-      const logoName = company.logo?.split("/logo/")[1];
-
-      if (logoName) {
-        fs.unlink("logo/" + logoName, () => {
-          console.log("File deleted successfully:", logoName);
+    // Handle logo file upload
+    if (req.files?.logo?.[0]) {
+      const oldLogoName = company.logo?.split("/logo/")[1];
+      if (oldLogoName) {
+        fs.unlink(`logo/${oldLogoName}`, () => {
+          console.log("Old logo deleted:", oldLogoName);
         });
       }
-
       logoPath = `/logo/${req.files.logo[0].filename}`;
     }
 
-    if (company.banner && company.banner.includes("/banner/")) {
-      bannerPath = `/banner/${company.banner?.split("/banner/")[1]}`;
-    }
-
-    if (req.files && Object.keys(req.files).length > 0) {
-      const bannerName = company.banner?.split("/banner/")[1];
-
-      if (bannerName) {
-        fs.unlink("banner/" + bannerName, () => {
-          console.log("File deleted successfully:", bannerName);
+    // Handle banner file upload
+    if (req.files?.banner?.[0]) {
+      const oldBannerName = company.banner?.split("/banner/")[1];
+      if (oldBannerName) {
+        fs.unlink(`banner/${oldBannerName}`, () => {
+          console.log("Old banner deleted:", oldBannerName);
         });
       }
-
       bannerPath = `/banner/${req.files.banner[0].filename}`;
     }
 
-    let settings = await Settings.find({ companyDomain });
+    let settings = await Settings.findOne({ companyDomain });
 
-    if (settings.length === 0) {
-      company.companyDomain = companyDomain;
-      company.logo = logoPath;
-      company.banner = bannerPath;
-      settings = new Settings(company);
-      savedSettings = await settings.save();
-      res.status(200).json(savedSettings);
-    } else {
-      settings = settings[0];
-
-      settings.logo = logoPath;
-      settings.banner = bannerPath;
-      settings.companyName = company.companyName;
-      settings.address = company.address;
-      settings.phone = company.phone;
-      settings.email = company.email;
-      settings.ownerName = company.ownerName;
-      settings.ownerPhone = company.ownerPhone;
-      settings.ownerEmail = company.ownerEmail;
-
-      settings = await settings.save();
-
-      res.status(200).json(settings);
+    if (!settings) {
+      const newSettings = new Settings({
+        ...company,
+        companyDomain,
+        logo: logoPath,
+        banner: bannerPath,
+      });
+      const saved = await newSettings.save();
+      return res.status(200).json(saved);
     }
+
+    // Update existing settings
+    settings.logo = logoPath;
+    settings.banner = bannerPath;
+    settings.companyName = company.companyName;
+    settings.address = company.address;
+    settings.phone = company.phone;
+    settings.email = company.email;
+    settings.ownerName = company.ownerName;
+    settings.ownerPhone = company.ownerPhone;
+    settings.ownerEmail = company.ownerEmail;
+
+    const updatedSettings = await settings.save();
+    res.status(200).json(updatedSettings);
   } catch (error) {
     console.error("Upload error:", error);
     res.status(500).json({ error: "File upload failed" });
   }
 };
+
 
 exports.getLogo = async (req, res, next) => {
   try {
