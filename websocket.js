@@ -7,10 +7,11 @@ const User = require("./models/user");
 const Settings = require("./models/settings");
 
 const transporter = nodemailer.createTransport({
-  service: "gmail",
+  host: "smtp.gmail.com",
+  // secure: true,
   auth: {
-    user: "izone5.media@gmail.com",
-    pass: "niwlnbyxupfhcpmm",
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASSWORD,
   },
 });
 
@@ -185,7 +186,7 @@ const initSocketIO = (httpServer) => {
         </body>`;
 
         const mailOptions = {
-          from: "izone5.media@gmail.com",
+          from: process.env.MAIL_USER,
           to: receiver.email, // Send an individual email to each user
           subject: data.subject,
           html: html,

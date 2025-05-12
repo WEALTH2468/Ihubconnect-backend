@@ -7,8 +7,8 @@ async function sendMail(option) {
       host: "smtp.gmail.com",
       // secure: true,
       auth: {
-        user: "izone5.media@gmail.com",
-        pass: "niwlnbyxupfhcpmm",
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASSWORD,
       },
       tls: {
         rejectUnauthorized: false,
@@ -16,7 +16,7 @@ async function sendMail(option) {
     });
 
     await transporter.sendMail({
-      from: "izone5.media@gmail.com",
+      from: process.env.EMAIL_USER,
       to: option.email,
       subject: option.subject,
       text: option.message,
@@ -30,4 +30,4 @@ async function sendMail(option) {
   }
 }
 
-module.exports = { sendMail };
+module.exports = { sendMail }; 
