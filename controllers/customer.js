@@ -52,20 +52,22 @@ exports.updateCustomer = async (req, res, next) => {
   const { id } = req.params;
   const customerData = JSON.parse(req.body.data);
 
-  Object.keys(req.files).forEach((key, index) => {
-    if (customerData[key]) {
-      const fileName = customerData[key].split("/images/")[1];
-      fs.unlink(`images/${fileName}`, () => {
-        customerData[key] = `/images/${req.files[key][0].filename}`;
-      });
-    }
+  if (req.files) {
+    Object.keys(req.files).forEach((key, index) => {
+      if (customerData[key]) {
+        const fileName = customerData[key].split("/images/")[1];
+        fs.unlink(`images/${fileName}`, () => {
+          customerData[key] = `/images/${req.files[key][0].filename}`;
+        });
+      }
 
-    customerData[key] = `/images/${req.files[key][0].filename}`;
-  });
+      customerData[key] = `/images/${req.files[key][0].filename}`;
+    });
+  }
 
   try {
     const updatedCustomer = await Customer.findOneAndUpdate(
-      { _id: id, companyData: req.auth.companyData },
+      { _id: id, companyDomain: req.auth.companyDomain },
       customerData,
       {
         new: true,
@@ -85,6 +87,57 @@ exports.updateCustomer = async (req, res, next) => {
     return res.status(500).json({
       message: error.message,
     });
+  }
+};
+
+// Update a specific contact within a customer
+exports.updateCustomerContact = async (req, res) => {
+  const { customerId, contactId } = req.params;
+  const updatedContactData = req.body;
+
+  console.log(updatedContactData);
+
+  if (!customerId || !contactId) {
+    console.error("Invalid request parameters");
+    return res.status(400).json({ message: "Invalid request parameters" });
+  }
+
+  try {
+    const customer = await Customer.findById({
+      _id: customerId,
+      companyDomain: req.auth.companyDomain,
+    });
+
+    if (!customer) {
+      return res.status(404).json({ message: "Customer not found" });
+    }
+
+    console.log(customer);
+
+    const contactIndex = customer.contacts.findIndex(
+      (contact) =>
+        contact.companyDomain === req.auth.companyDomain ||
+        contact._id.toString() === contactId
+    );
+
+    console.log(contactIndex);
+
+    if (contactIndex === -1) {
+      return res.status(404).json({ message: "Contact not found" });
+    }
+
+    // Update the contact data
+    customer.contacts[contactIndex] = {
+      ...customer.contacts[contactIndex].toObject(),
+      ...updatedContactData,
+    };
+
+    await customer.save();
+
+    res.status(200).json({ message: "Contact updated successfully", customer });
+  } catch (error) {
+    console.error("Error updating contact:", error);
+    res.status(500).json({ message: "Server error while updating contact" });
   }
 };
 
