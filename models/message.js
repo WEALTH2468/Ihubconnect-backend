@@ -2,39 +2,55 @@ const mongoose = require("mongoose");
 
 const messageSchema = new mongoose.Schema(
   {
-    companyDomain:{type: String},
+    companyDomain: { type: String },
+
     userId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: true,
     },
+
     chatId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Chat",
       required: true,
     },
+
     contactId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: true,
     },
+
     seen: { type: Boolean, default: false },
+
     content: { type: String },
     subject: { type: String },
+
     images: [
       {
         path: { type: String, required: true },
         name: { type: String, required: true },
       },
-    ], // Store both path & name
+    ],
+
     documents: [
       {
         path: { type: String, required: true },
         name: { type: String, required: true },
       },
-    ], // Store both path & name
+    ],
+
     link: { type: String },
+
     isEdited: { type: Boolean, default: false },
+
+    // 🔁 Reply reference
+    parentMessageId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Message",
+      default: null,
+    },
   },
   { timestamps: true }
 );
