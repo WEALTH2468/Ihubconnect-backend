@@ -19,7 +19,7 @@ exports.sendMessage = async (req, res) => {
   try {
     const companyDomain = req.headers.origin.split('//')[1];
     const date = new Date();
-    const { messageText: content, subject, link } = req.body;
+    const { messageText: content, subject, link, parentMessageId } = req.body;
     const { contactId } = req.params;
     const { userId, avatar } = req.auth;
 
@@ -27,9 +27,9 @@ exports.sendMessage = async (req, res) => {
     const images = req.files?.picture || [];
     const documents = req.files?.document || [];
 
-    
+    console.log(req.body)
 
-    // File paths and names (already saved by multer)
+    // Format image/document file data
     const uploadedImages = images.map((image) => ({
       path: `/images/${image.filename}`,
       name: image.originalname,
@@ -39,8 +39,6 @@ exports.sendMessage = async (req, res) => {
       path: `/document-library/${document.filename}`,
       name: document.originalname,
     }));
-
-   
 
     // Find or create chat
     let chat = await Chat.findOne({
@@ -55,7 +53,7 @@ exports.sendMessage = async (req, res) => {
       });
     }
 
-    // Create a new message
+    // Create the new message (with optional parentMessageId for replies)
     const message = new Message({
       companyDomain,
       chatId: chat._id,
@@ -63,42 +61,41 @@ exports.sendMessage = async (req, res) => {
       userId,
       contactId,
       subject,
-      images: uploadedImages, // Store image paths in DB
-      documents: uploadedDocuments, // Store document paths in DB
-      content: content?.trim() || "", // Trim whitespace to prevent empty content issues
+      images: uploadedImages,
+      documents: uploadedDocuments,
+      content: content?.trim() || '',
       link,
       isEdited: false,
+      parentMessageId: parentMessageId || null, // ✅ store reply reference
     });
 
-    // Save message first before updating chat
     await message.save();
 
-    // Ensure messages array exists before pushing
-    if (!chat.messages) {
-      chat.messages = [];
-    }
-
-    // Update chat with the last message
+    // Update chat
     chat.lastMessage =
       content?.trim() ||
       (uploadedImages.length > 0 || uploadedDocuments.length > 0
-        ? "[Attachment]"
-        : "No message");
+        ? '[Attachment]'
+        : 'No message');
 
     chat.lastMessageAt = date;
     chat.messages.push(message._id);
-
-    // Save chat in parallel with message
     await chat.save();
 
-    res
+    // Optionally populate parent message data
+    if (message.parentMessageId) {
+      await message.populate('parentMessageId', "content images documents userId");
+    }
+
+    return res
       .status(201)
       .json(chat.messages.length === 1 ? { message, chat } : message);
   } catch (error) {
-    console.error("Error in sendMessage:", error);
+    console.error('Error in sendMessage:', error);
     return res.status(500).json({ message: error.message });
   }
 };
+
 
 
 exports.deleteMessage = async (req, res) => {
@@ -221,7 +218,13 @@ exports.getMessages = async (req, res) => {
 
     let chat = await Chat.findOne({
       participants: { $all: [userId, contactId] },
-    }).populate("messages");
+    }).populate({
+      path: "messages",
+      populate: {
+        path: "parentMessageId",
+        select: "content images documents userId", // Adjust fields as needed
+      },
+    });
 
     chat ? res.status(200).json(chat.messages) : res.status(200).json([]);
   } catch (error) {
@@ -230,13 +233,18 @@ exports.getMessages = async (req, res) => {
   }
 };
 
+
 exports.getChats = async (req, res) => {
   try {
     const { userId } = req.auth;
 
-    let chat = await Chat.find({ participants: { $in: userId } }).populate(
-      "messages"
-    );
+    let chat = await Chat.find({ participants: { $in: userId } }).populate({
+      path: "messages",
+      populate: {
+        path: "parentMessageId",
+        select: "content images documents userId",
+      },
+    });
 
     chat.sort(
       (d1, d2) =>
@@ -262,9 +270,11 @@ exports.getChats = async (req, res) => {
         };
       });
     }
+
     chat ? res.status(200).json(chat) : res.status(200).json([]);
   } catch (error) {
     console.error(error);
     return res.status(500).json({ message: error.message });
   }
 };
+

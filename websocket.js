@@ -199,9 +199,7 @@ const initSocketIO = (httpServer) => {
 
       results.forEach((result, index) => {
         if (result.status === "fulfilled") {
-          console.log(
-            `Message sent to ${data.receivers[index].email}: ${result.value.messageId}`
-          );
+         
         } else {
           console.error(
             `Error occurred for ${data.receivers[index].email}:`,
@@ -242,7 +240,6 @@ const initSocketIO = (httpServer) => {
 
     addNewUser({ companyDomain, userId, socket, status: "online" });
 
-    console.log({ In: onlineUsers });
 
     io.emit("onlineUsers", onlineUsers);
 
@@ -254,10 +251,8 @@ const initSocketIO = (httpServer) => {
     );
     socket.on("refreshPost", (post) => {
       const usersSocketId = Object.entries(onlineUsers)
-        .filter((user) => user[1][2] === post.payload.companyDomain)
+        .filter((user) => user[1][2] === post.payload?.companyDomain)
         .map((item) => item[1][0]);
-
-      console.log({ usersSocketId });
 
       io.to(usersSocketId).emit("refreshPost", post);
     });
@@ -275,35 +270,117 @@ const initSocketIO = (httpServer) => {
       emitNotification(data);
     });
 
-    socket.on("emitSendChat", (data) => {
-      const message = data.chat ? data.message : data;
-      const socketId = getContactSocketId(message.contactId);
-      if (socketId) {
-        // Emit message to receiver
-        io.to(socketId).emit("sendChat", data);
-        console.log("Message sent:");
-      } else {
-        console.error("Receiver not found for message:", data);
-      }
-    });
+  socket.on("emitSendChat", async (data) => {
+  try {
+    let message = data.chat ? data.message : data;
 
-    socket.on("emitSendPanelChat", (data) => {
+    // Populate parentMessageId if exists
+    if (message.parentMessageId) {
+      const populated = await Message.findById(message._id).populate(
+        "parentMessageId",
+        "content images documents userId"
+      );
+      if (populated) {
+        message = populated;
+      }
+    }
+
+    const socketId = getContactSocketId(message.contactId);
+    if (socketId) {
+      io.to(socketId).emit("sendChat", { ...data, message });
+    } else {
+      console.error("Receiver not found for message:", data);
+    }
+  } catch (err) {
+    console.error("Error in emitSendChat:", err);
+  }
+});
+
+ socket.on("emitSendPanelChat", (data) => {
       const message = data.chat ? data.message : data;
       const socketId = getContactSocketId(message.contactId);
       if (socketId) {
         // Emit message to receiver
         io.to(socketId).emit("sendPanelChat", data);
-        console.log("Message sent:");
       } else {
         console.error("Receiver not found for message:", data);
       }
     });
 
-    socket.on("markMessageAsSeen", async ({ messageId, senderId }) => {
-      // Update message in DB
-      await Message.findByIdAndUpdate(messageId, { seen: true });   
-      // Notify the sender that the message has been seen
-      io.to(senderId).emit("messageSeen", { messageId });
+    socket.on('emitEditChat', (data) => {
+      const chatId = data.updatedMessage.userId
+      const contactId = data.updatedMessage.contactId
+       const socketId = getContactSocketId(contactId);
+      if (socketId) {
+        // Emit message to receiver
+        io.to(socketId).emit("editedChat", {
+      message: data.updatedMessage,
+      chatId,
+    });
+      } else {
+        console.error("Receiver not found for message:", data);
+      }
+    })
+
+
+    socket.on("markMessageAsSeen", async (message) => {
+  const messageId = message.messageId;
+  const senderId = message.senderId;
+  const contactId = message.recipientId;
+  const socketId = getContactSocketId(senderId);
+
+  if (socketId) {
+    // Update message in DB
+    const updatedMessage = await Message.findByIdAndUpdate(
+      messageId,
+      { seen: true },
+      { new: true }
+    )
+      .populate('parentMessageId', 'content images documents userId')
+      .lean();
+
+    io.to(socketId).emit("messageSeen", {
+      message: updatedMessage,
+      contactId,
+    });
+  } else {
+    console.error("Receiver not found for message:", message);
+  }
+});
+
+
+    socket.on("markMessagesAsSeen", async ({ senderId, recipientId }) => {
+      try {
+        // Update all unseen messages from sender (userId) to recipient (contactId)
+        await Message.updateMany(
+          {
+            userId: senderId,
+            contactId: recipientId,
+            seen: false,
+          },
+          { seen: true }
+        );
+
+        // Get IDs of updated messages
+        const updatedMessages = await Message.find({
+          userId: senderId,
+          contactId: recipientId,
+          seen: true,
+        }).select("_id");
+
+        const messageIds = updatedMessages.map((msg) => msg._id.toString());
+
+        const socketId = getContactSocketId(senderId); // sender receives seen update
+        if (socketId) {
+          io.to(socketId).emit("messagesMarkedAsSeen", {
+            contactId: recipientId, // who saw the messages
+            userId: senderId, // who sent the messages
+            messageIds,
+          });
+        }
+      } catch (err) {
+        console.error("Failed to mark messages as seen:", err);
+      }
     });
 
     socket.on("updateStatus", async (data) => {
