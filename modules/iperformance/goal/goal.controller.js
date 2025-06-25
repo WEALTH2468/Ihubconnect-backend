@@ -30,7 +30,6 @@ exports.getGoals = async (req, res) => {
     const goals = await goalService.getGoals(filters);
     return res.status(200).json(goals);
   } catch (error) {
-    console.log({ error });
     if (error.name == "BSONError" || error.name == "CastError") {
       return res.status(400).json({ message: error.message });
     }
@@ -50,7 +49,6 @@ exports.getGoal = async (req, res) => {
 
     return res.status(200).json({ goal });
   } catch (error) {
-    console.log({ error });
     if (error.name == "CastError" || error.name == "BSONError") {
       return res.status(400).json({ message: error.message });
     }
@@ -70,7 +68,6 @@ exports.createGoal = async (req, res) => {
     const goal = await goalService.createGoal(data);
     return res.status(201).json({ message: "Goal created successfully", goal });
   } catch (error) {
-    console.log({ error });
     if (error.name === "ValidationError") {
       return res.status(400).json({
         message: error.message,
@@ -144,7 +141,6 @@ exports.archiveGoal = async (req, res) => {
       message: "Goals moved successfully!",
     });
   } catch (error) {
-    console.log({ error });
     return res.status(500).json({ message: error.message });
   }
 };

@@ -83,7 +83,6 @@ exports.updateCustomer = async (req, res, next) => {
       updatedCustomer,
     });
   } catch (error) {
-    console.log(error);
     return res.status(500).json({
       message: error.message,
     });
@@ -95,7 +94,6 @@ exports.updateCustomerContact = async (req, res) => {
   const { customerId, contactId } = req.params;
   const updatedContactData = req.body;
 
-  console.log(updatedContactData);
 
   if (!customerId || !contactId) {
     console.error("Invalid request parameters");
@@ -112,7 +110,6 @@ exports.updateCustomerContact = async (req, res) => {
       return res.status(404).json({ message: "Customer not found" });
     }
 
-    console.log(customer);
 
     const contactIndex = customer.contacts.findIndex(
       (contact) =>
@@ -120,7 +117,6 @@ exports.updateCustomerContact = async (req, res) => {
         contact._id.toString() === contactId
     );
 
-    console.log(contactIndex);
 
     if (contactIndex === -1) {
       return res.status(404).json({ message: "Contact not found" });
@@ -181,7 +177,6 @@ exports.deleteCustomer = async (req, res, next) => {
       details: results,
     });
   } catch (error) {
-    console.log(error);
     res.status(500).json({
       message: "An error occurred during the deletion operation",
       error: error.message,
@@ -221,7 +216,6 @@ exports.deleteContacts = async (req, res, next) => {
       updatedCustomer: customer,
     });
   } catch (error) {
-    console.log(error);
     res.status(500).json({
       message: "An error occurred during the deletion operation",
       error: error.message,

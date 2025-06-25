@@ -129,7 +129,6 @@ exports.addTeammate = async (req, res, next) => {
       message: "Created successfully!",
     });
   } catch (error) {
-    console.log(error);
     res.status(500).json({ error: error.message });
   }
 };
@@ -226,7 +225,6 @@ exports.downloadFile = async (req, res, next) => {
 
   return res.download(filePath, (err) => {
     if (err) {
-      console.log(err);
       return res.status(500).send("File not found or an error occurred.");
     }
   });

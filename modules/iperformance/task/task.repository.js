@@ -75,7 +75,6 @@ class TaskRepository extends BaseRepository {
     return await this.updateById(id, task);
   }
   async updateSubtasks(subtasks, reviewers) {
-    console.log({ subtasks });
     const bulkUpdatePromises = subtasks.map((subtask) =>
       this.updateById(subtask, { $set: { reviewers, reviewers } })
     );

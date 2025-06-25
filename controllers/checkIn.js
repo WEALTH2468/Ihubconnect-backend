@@ -34,7 +34,6 @@ const fetchAttendant = async (userId, date, companyDomain) => {
 
     const endOfDay = new Date(date);
     endOfDay.setHours(23, 59, 59, 999);
-    console.log({ startOfDay, endOfDay });
 
     try {
       const attendants = await Attendant.find({
@@ -116,7 +115,6 @@ exports.addAttendant = async (req, res, next) => {
       });
     }
   } catch (error) {
-    console.log(error);
     res.status(500).json({ error: error.message });
   }
 };

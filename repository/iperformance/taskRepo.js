@@ -251,7 +251,6 @@ exports.getWorkloadSeries = async (companyDomain, queryParams, categories) => {
       if (task.startDate) {
         const taskMonth = format(new Date(task.startDate), "MMM yyyy");
         const categoryIndex = categories.indexOf(taskMonth);
-        console.log({ categoryIndex });
 
         if (categoryIndex !== -1 && task.weight?.name) {
           series[0].data[categoryIndex] += 1;

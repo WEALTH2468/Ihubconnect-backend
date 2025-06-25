@@ -32,7 +32,6 @@ const customerSchema = new Schema({
 // eslint-disable-next-line func-names
 customerSchema.pre("validate", async function (next) {
   try {
-    console.log({ companyDomain: this.companyDomain });
     const counter = await Counter.findOneAndUpdate(
       { counterId: "customerNo", companyDomain: this.companyDomain },
       { $inc: { seq: 1 } },

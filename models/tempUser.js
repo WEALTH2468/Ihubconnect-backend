@@ -14,7 +14,6 @@ const tempUserSchema = new mongoose.Schema({
 // Generate a 6-digit verification code
 tempUserSchema.methods.generateVerificationCode = function () {
   const code = Math.floor(100000 + Math.random() * 900000).toString();
-  console.log({code})
   this.verificationCode = code;
   this.verificationCodeExpiresAt = Date.now() + 15 * 60 * 1000; // 15 minutes
   return code;

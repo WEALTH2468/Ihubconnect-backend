@@ -28,7 +28,6 @@ exports.addAttachmentType = async (req, res, next) => {
       message: 'Created successfully!',
     });
   } catch (error) {
-    console.log(error);
     res.status(500).json({ error: error.message });
   }
 };

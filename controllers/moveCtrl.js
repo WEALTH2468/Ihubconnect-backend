@@ -41,12 +41,10 @@ exports.moveData = async (req, res) => {
         {},
         { $set: { companyDomain: "mudiame.ihubconnect.com" } }
       );
-      console.log(`Updated ${modelName}`);
     }
 
     return res.status(200).json({ message: "Models successfully updated" });
   } catch (error) {
-    console.log({ error });
     return res.status(500).json({ message: "Internal server error" });
   }
 };

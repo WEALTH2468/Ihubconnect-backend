@@ -107,7 +107,6 @@ class ObjectiveService {
       query.archived = filters.view === "archived" ? true : false;
     }
 
-    console.log({ collaborators: query.collaborators });
     return query;
   }
 
@@ -133,7 +132,6 @@ class ObjectiveService {
     const { progress, parentStatus } =
       calculateParentStatusAndProgress(goalObjectives);
 
-    console.log({ progress, parentStatus });
 
     return await goalService.updateGoal(goalId, {
       status: parentStatus,

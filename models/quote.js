@@ -69,7 +69,6 @@ const quoteSchema = new Schema({
 // eslint-disable-next-line func-names
 quoteSchema.pre("validate", async function (next) {
   try {
-    console.log({ companyDomain: this.companyDomain });
     const counter = await Counter.findOneAndUpdate(
       { counterId: "quoteId", companyDomain: this.companyDomain },
       { $inc: { seq: 1 } },

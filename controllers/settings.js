@@ -19,7 +19,6 @@ exports.updateLogo = async (req, res, next) => {
       const oldLogoName = company.logo?.split("/logo/")[1];
       if (oldLogoName) {
         fs.unlink(`logo/${oldLogoName}`, () => {
-          console.log("Old logo deleted:", oldLogoName);
         });
       }
       logoPath = `/logo/${req.files.logo[0].filename}`;
@@ -30,7 +29,6 @@ exports.updateLogo = async (req, res, next) => {
       const oldBannerName = company.banner?.split("/banner/")[1];
       if (oldBannerName) {
         fs.unlink(`banner/${oldBannerName}`, () => {
-          console.log("Old banner deleted:", oldBannerName);
         });
       }
       bannerPath = `/banner/${req.files.banner[0].filename}`;

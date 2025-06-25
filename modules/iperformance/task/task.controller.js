@@ -34,7 +34,6 @@ exports.createTask = async (req, res) => {
       .status(201)
       .json({ message: "Task created successfully", task: newTask });
   } catch (error) {
-    console.log({ error });
     if (error.name === "ValidationError") {
       return res.status(400).json({
         message: "Validation Error when creating task",
@@ -177,7 +176,6 @@ exports.updateTask = async (req, res) => {
 
     return res.status(200).json({ updatedTask: task });
   } catch (error) {
-    console.log({ error });
     if (error.name == "CastError" || error.name == "ValidationError") {
       return res.status(400).json({ message: error.message });
     }
@@ -240,7 +238,6 @@ exports.archiveTasks = async (req, res) => {
     if (error.name == "CastError" || error.name == "ValidationError") {
       return res.status(400).json({ message: error.message });
     }
-    console.log({ error });
     return res.status(500).json({ message: error.message });
   }
 };
