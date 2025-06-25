@@ -145,7 +145,6 @@ exports.signup = async (req, res, next) => {
     const companyDomain = req.headers.origin.split("//")[1];
 
     const settings = await Settings.find({ companyDomain });
-    console.log({ settings: settings.length < 1 });
     const companyName = settings.length > 0 ? settings[0].companyDomain : "";
 
     const { email, displayName, password, firstName, lastName } = req.body;
@@ -864,7 +863,6 @@ exports.reset_password = async (req, res) => {
       success: false,
       message: "Unable to reset user password",
     });
-    console.log(error);
   }
 };
 
@@ -926,7 +924,6 @@ exports.setUserJobPosition = async (req, res) => {
       .status(200)
       .json({ message: "Successfully set all users job position to null" });
   } catch (error) {
-    console.log({ error });
     return res.status(500).json({ message: "Server error" });
   }
 };

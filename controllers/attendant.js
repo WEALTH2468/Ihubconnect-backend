@@ -53,8 +53,6 @@ exports.getAttendant = async (req, res, next) => {
 
     if (userId && fromDate && toDate) {
 
-      console.log('userId, fromDate, toDate', userId, fromDate, toDate);
-
       const startOfDay = new Date(fromDate).setHours(0, 0, 0, 0);
       const endOfDay = new Date(toDate).setHours(23, 59, 59, 999);
 
@@ -146,7 +144,6 @@ exports.getAttendantsByDate = async (req, res, next) => {
         const todayDate = new Date();
 
 
-    console.log( typeof todayDate);
 
     const startOfDay = new Date(req.query.date).setHours(0, 0, 0, 0);
     const endOfDay = new Date(req.query.date).setHours(23, 59, 59, 999);
@@ -198,7 +195,6 @@ exports.addAttendant = async (req, res, next) => {
       });
     }
   } catch (error) {
-    console.log(error);
     res.status(500).json({ error: error.message });
   }
 };

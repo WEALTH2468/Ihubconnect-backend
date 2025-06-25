@@ -8,7 +8,6 @@ async function createIndexes() {
   try {
     await Chat.createIndexes();
     await Message.createIndexes();
-    console.log('Indexes created successfully');
   } catch (error) {
     console.error('Error creating indexes:', error);
   }
@@ -27,7 +26,6 @@ exports.sendMessage = async (req, res) => {
     const images = req.files?.picture || [];
     const documents = req.files?.document || [];
 
-    console.log(req.body)
 
     // Format image/document file data
     const uploadedImages = images.map((image) => ({
@@ -103,7 +101,6 @@ exports.deleteMessage = async (req, res) => {
     const { messageId } = req.params; // Extract messageId from request params
     const { userId } = req.auth; // Get userId from auth middleware
 
-    console.log("Deleting message:", messageId, "by user:", userId);
 
     // Find the message by ID
     const message = await Message.findById(messageId);
@@ -112,14 +109,12 @@ exports.deleteMessage = async (req, res) => {
       return res.status(404).json({ message: "Message not found" });
     }
 
-    console.log("Message found:", message);
 
     // Delete attached files (images & documents)
     const deleteFile = (filePath) => {
       const absolutePath = path.join(__dirname, "..", filePath); // Adjust path if needed
       if (fs.existsSync(absolutePath)) {
         fs.unlinkSync(absolutePath);
-        console.log(`Deleted file: ${absolutePath}`);
       }
     };
 
@@ -151,7 +146,6 @@ exports.editMessage = async (req, res) => {
     const { text } = req.body; // Get updated text from request body
     const { userId } = req.auth; // Get user ID from auth middleware
 
-    console.log(messageId, text, userId);
 
     // Find the message by ID and ensure it belongs to the authenticated user
     const message = await Message.findByIdAndUpdate(
@@ -160,7 +154,6 @@ exports.editMessage = async (req, res) => {
       { new: true } // Return the updated message
     );
 
-    console.log("Updated message:", message);
 
     if (!message) {
       return res.status(404).json({ message: "Message not found" });

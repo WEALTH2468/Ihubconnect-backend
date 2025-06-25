@@ -145,7 +145,6 @@ exports.deleteJobPosition = async (req, res) => {
 exports.updateJobPosition = async (req, res) => {
   try {
     const id = req.params.id;
-    console.log({ body: req.body });
     const updatedJobPosition = await JobPosition.findOneAndUpdate(
       { _id: id, companyDomain: req.auth.companyDomain },
       req.body,
@@ -188,7 +187,6 @@ exports.resolveAllDuplicates = async (req, res) => {
         { $set: { weight: keepId } }
       );
 
-      console.log({ removeIds });
       await Weight.deleteMany({ _id: { $in: removeIds } });
     }
 

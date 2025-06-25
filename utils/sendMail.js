@@ -23,10 +23,7 @@ async function sendMail(option) {
       html: option.html,
     });
 
-    console.log("Email sent to user successfully");
   } catch (err) {
-    console.log(err);
-    console.log("Email not sent");
   }
 }
 

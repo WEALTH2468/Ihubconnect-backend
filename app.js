@@ -45,7 +45,6 @@ function connectToDatabase() {
   // updatePost()
   // updateDocument()
 
-  console.log(process.env.frontend_domain.split(","));
   return new Promise((resolve, reject) => {
     mongoose
       .connect(process.env.localConnect, {
@@ -55,14 +54,13 @@ function connectToDatabase() {
       })
       .then(async () => {
         // await generateChat()
-        console.log("Connected to local MongoDB");
+        ("Connected to local MongoDB");
         await createDefaultRolesIfAbsent();
         // await createDefaultWeights();
         resolve();
       })
       .catch((error) => {
         console.error("Failed to connect to local MongoDB:", error.message);
-        console.log("Trying fallback connection...");
 
         mongoose
           .connect(process.env.remoteDeployment, {
@@ -164,7 +162,6 @@ async function updateUsers() {
 
     if (updated) {
       await user.save();
-      console.log(`User ${user._id} updated successfully`);
     }
   }
 }
@@ -187,7 +184,6 @@ async function updateNotifications() {
 
     if (updated) {
       await notification.save();
-      console.log(`Notification ${notification._id} updated successfully`);
     }
   }
 }
@@ -210,7 +206,6 @@ async function updateunsentNotifications() {
 
     if (updated) {
       await notification.save();
-      console.log(`Notification ${notification._id} updated successfully`);
     }
   }
 }
@@ -235,7 +230,6 @@ async function updateComment() {
 
     if (updated) {
       await Comment.updateOne({ _id: comment._id }, comment);
-      console.log(`Comment ${comment._id} updated successfully`);
     }
   });
 
@@ -268,7 +262,6 @@ async function updatePost() {
 
     if (updated) {
       await Post.updateOne({ _id: post._id }, post);
-      console.log(`Post ${post._id} updated successfully`);
     }
   });
 
@@ -278,7 +271,6 @@ async function updatePost() {
 async function updateDocument() {
   const documents = await Document.find({}).lean();
 
-  console.log({ documents });
 
   const updateTasks = documents.map(async (document) => {
     let updated = false;
@@ -301,7 +293,6 @@ async function updateDocument() {
 
     if (updated) {
       await Document.updateOne({ _id: document._id }, document);
-      console.log(`Document ${document._id} updated successfully`);
     }
   });
 

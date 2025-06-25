@@ -40,7 +40,6 @@ class BaseRepository {
       { $match: this.getTenantFilter(query) },
       ...aggregateList,
     ];
-    //console.log({ match: fullAggregateList[0].$match });
 
     return await this.model.aggregate(fullAggregateList);
   }
